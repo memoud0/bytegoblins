@@ -1,1 +1,6 @@
 .env
+backend/.env
+backend/byte.json
+*.pyc
+backend/.env
+backend/.env
