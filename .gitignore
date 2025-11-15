@@ -2,3 +2,4 @@
 backend/.env
 backend/byte.json
 *.pyc
+backend/byte.json
