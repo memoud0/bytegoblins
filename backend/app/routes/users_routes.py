@@ -17,6 +17,8 @@ def login_user():
 
     user_service = UserService()
     profile = user_service.ensure_user(username)
+    user_service.update_last_active(username)
+    profile = user_service.get_user(username) or profile
 
     return jsonify(
         {

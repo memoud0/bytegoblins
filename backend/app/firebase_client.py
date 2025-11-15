@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from flask import Flask, current_app
@@ -53,9 +52,11 @@ def get_firestore_client(app: Flask | None = None):
     return firestore.client(firebase_app)
 
 
-def server_timestamp() -> datetime:
-    """Consistent UTC timestamps for Firestore documents."""
-    return datetime.now(timezone.utc)
+def server_timestamp() -> Any:
+    """Return Firestore's server timestamp sentinel for consistent ordering."""
+    if firestore is None:
+        raise RuntimeError("firebase-admin is not installed; cannot create server timestamps.")
+    return firestore.SERVER_TIMESTAMP
 
 
 def _build_cred_payload(app: Flask) -> dict[str, str]:

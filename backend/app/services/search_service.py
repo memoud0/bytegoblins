@@ -19,8 +19,8 @@ class SearchService:
         if not normalized:
             raise ValueError("Query is empty.")
 
-        event_id = self._record_search_event(username, query, normalized)
         profile = self.user_service.ensure_user(username)
+        event_id = self._record_search_event(username, query, normalized)
         top_genres = self.user_service.get_top_genres(profile)
 
         tracks = self.track_service.search_tracks(normalized, limit=limit)

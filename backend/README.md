@@ -1,24 +1,21 @@
 # Backend Overview
 
-This folder hosts a small Flask skeleton that will grow into the ByteGoblin's backend. The structure focuses on keeping the core layers
-separated so future Firebase and Spotify work can slot in cleanly.
+This directory hosts the ByteGoblin Flask API plus all Firebase/Spotify integrations. The structure keeps HTTP routes, business logic, and data helpers split into discrete packages:
 
 ```
 backend/
 ├── app/
 │   ├── __init__.py          # App factory & blueprint registration
 │   ├── config.py            # Environment-aware settings
-│   ├── blueprints/
-│   │   ├── __init__.py
-│   │   ├── health.py        # /api/health status check
-│   │   └── spotify.py       # Spotify-facing endpoints
-│   └── services/
-│       ├── __init__.py
-│       ├── firebase_service.py
-│       └── spotify_service.py
-├── run.py                   # Local entry point (flask --app run.py run)
+│   ├── firebase_client.py   # Firebase Admin bootstrap + helpers
+│   ├── models/              # Dataclasses shared between layers
+│   ├── routes/              # Flask blueprints (health, users, match, etc.)
+│   ├── services/            # Business logic (sessions, search, library, Spotify)
+│   └── utils/               # Scoring, serialization, validation helpers
 ├── requirements.txt
-└── .env.example
+├── run.py                   # Local entry point (flask --app run.py run)
+├── .env.example
+└── README.md
 ```
 
 ## Getting Started
@@ -36,31 +33,20 @@ backend/
    ```
 4. **Configure environment variables**
    - Copy `.env.example` to `.env` and fill in secrets for Spotify and Firebase.
-   - When using service account JSON for Firebase, paste the private key as-is (including literal `\n` sequences) so it can be reconstructed.
+   - When using service account JSON for Firebase, paste the private key as-is (include literal `\n` sequences).
 5. **Run the API**
    ```bash
    flask --app run.py --debug run
    ```
 
-## Spotify Integration Plan
+## Spotify Integration Notes
 
-- `SpotifyService` implements the Client Credentials grant for server-to-server calls (search is stubbed as the first API).
-- Use `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` environment values.
-- Extend the blueprint in `app/blueprints/spotify.py` for additional resources (playlists, top tracks, etc.).
+- `SpotifyService` implements the Client Credentials grant and exposes `/api/songs/preview`.
+- Provide `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, and `SPOTIFY_REDIRECT_URI` in the environment.
+- Extend `app/routes/spotify_routes.py` for additional endpoints (playlists, recommendations, etc.).
 
-## Firebase Integration Plan
+## Firebase Integration Notes
 
-- `firebase_service.py` configures Firebase Admin SDK once and attaches the initialized app to Flask's `g` context for easy reuse.
-- Expect to store Firebase credentials in environment variables rather than committing JSON.
-- Future data-access helpers can live alongside `firebase_service.py` or in a dedicated `repositories/` package.
-
-## Testing
-
-At minimum, wire up pytest with a simple smoke test against the app factory:
-
-```bash
-pip install pytest
-pytest
-```
-
-As functionality grows, add integration tests for each blueprint and service.
+- `app/firebase_client.py` initializes Firebase Admin once per process and exposes helpers for Firestore + server timestamps.
+- Services access Firestore via `get_firestore_client()` and rely on server-side timestamps for consistent ordering.
+- Data access lives inside `app/services/*` and can be expanded with repositories as needed.

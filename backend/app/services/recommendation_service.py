@@ -21,11 +21,15 @@ class RecommendationService:
             dislike_avg = dislike_sum / profile.dislikes_count if profile.dislikes_count else None
 
             if like_avg is None and dislike_avg is None:
-                preferences[feature] = 0.5
+                preference = 0.5
             elif like_avg is not None and dislike_avg is not None:
-                preferences[feature] = like_avg - 0.5 * dislike_avg
+                preference = like_avg - 0.5 * dislike_avg
+            elif like_avg is not None:
+                preference = like_avg
             else:
-                preferences[feature] = like_avg if like_avg is not None else 0.5
+                # No likes recorded yet; start from neutral preference and penalize by dislikes.
+                preference = 0.5 - 0.5 * dislike_avg
+            preferences[feature] = _clamp(preference)
         return preferences
 
     def build_refined_track_ids(
@@ -60,3 +64,7 @@ class RecommendationService:
             genre_counts[genre] = genre_counts.get(genre, 0) + 1
         sorted_genres = sorted(genre_counts.items(), key=lambda item: item[1], reverse=True)
         return [genre for genre, _ in sorted_genres[:limit]]
+
+
+def _clamp(value: float, min_value: float = 0.0, max_value: float = 1.0) -> float:
+    return max(min_value, min(max_value, float(value)))

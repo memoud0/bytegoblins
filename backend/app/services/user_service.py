@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from firebase_admin import firestore
+
 from app.firebase_client import get_firestore_client, server_timestamp
 from app.models import UserProfile
 from app.models.track import NUMERIC_FEATURES, Track
@@ -16,16 +18,16 @@ class UserService:
         if snapshot.exists:
             return UserProfile.from_mapping(username, snapshot.to_dict() or {})
 
-        now = server_timestamp()
-        profile = UserProfile(username=username, created_at=now, last_active_at=now)
+        profile = UserProfile(username=username)
         doc_ref.set(
             {
                 **profile.to_dict(),
-                "created_at": now,
-                "last_active_at": now,
+                "created_at": server_timestamp(),
+                "last_active_at": server_timestamp(),
             }
         )
-        return profile
+        created_snapshot = doc_ref.get()
+        return UserProfile.from_mapping(username, created_snapshot.to_dict() or {})
 
     def get_user(self, username: str) -> UserProfile | None:
         snapshot = self.users_ref.document(username).get()
@@ -55,8 +57,8 @@ class UserService:
         phase: str,
     ) -> None:
         user_ref = self.users_ref.document(username)
-        now = server_timestamp()
         swipe_ref = user_ref.collection("swipes").document()
+        now = server_timestamp()
         swipe_ref.set(
             {
                 "track_id": track.track_id,
@@ -67,38 +69,44 @@ class UserService:
             }
         )
 
-        snapshot = user_ref.get()
-        profile = UserProfile.from_mapping(username, snapshot.to_dict() or {})
+        @firestore.transactional
+        def _update_profile(transaction: firestore.Transaction) -> None:
+            snapshot = transaction.get(user_ref)
+            profile = UserProfile.from_mapping(username, snapshot.to_dict() or {})
 
-        if liked:
-            profile.likes_count += 1
-        else:
-            profile.dislikes_count += 1
+            if liked:
+                profile.likes_count += 1
+            else:
+                profile.dislikes_count += 1
 
-        genre_key = track.track_genre_group or track.track_genre
-        if genre_key:
-            genre_map = profile.liked_genres if liked else profile.disliked_genres
-            genre_map[genre_key] = genre_map.get(genre_key, 0) + 1
+            genre_key = track.track_genre_group or track.track_genre
+            if genre_key:
+                genre_map = profile.liked_genres if liked else profile.disliked_genres
+                genre_map[genre_key] = genre_map.get(genre_key, 0) + 1
 
-        feature_map = profile.feature_sums_liked if liked else profile.feature_sums_disliked
-        for feature in NUMERIC_FEATURES:
-            track_value = getattr(track, feature, None)
-            if track_value is None:
-                continue
-            feature_map[feature] = feature_map.get(feature, 0.0) + float(track_value)
+            feature_map = profile.feature_sums_liked if liked else profile.feature_sums_disliked
+            for feature in NUMERIC_FEATURES:
+                track_value = getattr(track, feature, None)
+                if track_value is None:
+                    continue
+                feature_map[feature] = feature_map.get(feature, 0.0) + float(track_value)
 
-        user_ref.set(
-            {
-                "likes_count": profile.likes_count,
-                "dislikes_count": profile.dislikes_count,
-                "liked_genres": profile.liked_genres,
-                "disliked_genres": profile.disliked_genres,
-                "feature_sums_liked": profile.feature_sums_liked,
-                "feature_sums_disliked": profile.feature_sums_disliked,
-                "last_active_at": now,
-            },
-            merge=True,
-        )
+            transaction.set(
+                user_ref,
+                {
+                    "likes_count": profile.likes_count,
+                    "dislikes_count": profile.dislikes_count,
+                    "liked_genres": profile.liked_genres,
+                    "disliked_genres": profile.disliked_genres,
+                    "feature_sums_liked": profile.feature_sums_liked,
+                    "feature_sums_disliked": profile.feature_sums_disliked,
+                    "last_active_at": server_timestamp(),
+                },
+                merge=True,
+            )
+
+        transaction = self.db.transaction()
+        _update_profile(transaction)
 
     def get_top_genres(self, profile: UserProfile, limit: int = 3) -> list[str]:
         scores: dict[str, float] = {}

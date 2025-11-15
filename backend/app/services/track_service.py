@@ -21,9 +21,13 @@ class TrackService:
         return Track.from_mapping(doc.id, data)
 
     def get_tracks_by_ids(self, track_ids: Iterable[str]) -> list[Track]:
+        track_ids = list(track_ids)
+        if not track_ids:
+            return []
+        refs = [self.db.collection("tracks").document(track_id) for track_id in track_ids]
+        docs = list(self.db.get_all(refs))
         results: list[Track] = []
-        for track_id in track_ids:
-            doc = self.db.collection("tracks").document(track_id).get()
+        for doc in docs:
             if not doc.exists:
                 continue
             data = doc.to_dict() or {}
