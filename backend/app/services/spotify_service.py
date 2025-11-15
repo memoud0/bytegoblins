@@ -10,7 +10,7 @@ from flask import current_app
 
 
 class SpotifyServiceError(RuntimeError):
-    """Raised when Spotify returns an error response."""
+    """Raised when Spotify Web API calls fail."""
 
 
 @dataclass
@@ -19,58 +19,58 @@ class _TokenCache:
     expires_at: float
 
     def is_valid(self) -> bool:
-        return time.time() < self.expires_at - 30  # refresh 30s early
+        return time.time() < self.expires_at - 30  # refresh 30 seconds early
 
 
 class SpotifyService:
     TOKEN_URL = "https://accounts.spotify.com/api/token"
-    API_BASE_URL = "https://api.spotify.com/v1"
+    TRACKS_URL = "https://api.spotify.com/v1/tracks"
     _token_cache: _TokenCache | None = None
 
     def __init__(self) -> None:
         config = current_app.config
         self.client_id: str | None = config.get("SPOTIFY_CLIENT_ID")
         self.client_secret: str | None = config.get("SPOTIFY_CLIENT_SECRET")
-
         if not self.client_id or not self.client_secret:
             raise SpotifyServiceError("Spotify credentials are not configured.")
 
-    def search(self, query: str, search_type: str = "track", limit: int = 10) -> dict[str, Any]:
+    def get_track_preview(self, track_id: str) -> dict[str, Any]:
         token = self._get_access_token()
         response = requests.get(
-            f"{self.API_BASE_URL}/search",
-            params={"q": query, "type": search_type, "limit": limit},
+            f"{self.TRACKS_URL}/{track_id}",
             headers={"Authorization": f"Bearer {token}"},
             timeout=10,
         )
         if not response.ok:
-            raise SpotifyServiceError(f"Spotify search failed: {response.text}")
-        return response.json()
+            raise SpotifyServiceError(f"Spotify track lookup failed: {response.text}")
+        payload = response.json()
+        return {
+            "trackId": track_id,
+            "previewUrl": payload.get("preview_url"),
+            "name": payload.get("name"),
+            "artists": [artist.get("name") for artist in payload.get("artists", [])],
+            "albumArtUrl": payload.get("album", {}).get("images", [{}])[0].get("url"),
+        }
 
     def _get_access_token(self) -> str:
         if self._token_cache and self._token_cache.is_valid():
             return self._token_cache.access_token
-
-        token = self._request_new_token()
-        return token
+        return self._request_new_token()
 
     def _request_new_token(self) -> str:
         credentials_b64 = base64.b64encode(f"{self.client_id}:{self.client_secret}".encode()).decode()
-
         response = requests.post(
             self.TOKEN_URL,
             data={"grant_type": "client_credentials"},
             headers={"Authorization": f"Basic {credentials_b64}"},
             timeout=10,
         )
-
         if not response.ok:
             raise SpotifyServiceError(f"Failed to acquire Spotify token: {response.text}")
 
         payload = response.json()
-        expires_in = payload.get("expires_in", 3600)
         access_token = payload.get("access_token")
-
+        expires_in = payload.get("expires_in", 3600)
         if not access_token:
             raise SpotifyServiceError("Spotify token payload missing `access_token`.")
 

@@ -1,8 +1,9 @@
 from flask import Flask
+from flask_cors import CORS
 
-from .blueprints import register_blueprints
 from .config import get_config
-from .services.firebase_service import init_firebase_app
+from .firebase_client import init_firebase_app
+from .routes import register_routes
 
 
 def create_app(config_name: str | None = None) -> Flask:
@@ -11,7 +12,8 @@ def create_app(config_name: str | None = None) -> Flask:
     app_config = get_config(config_name)
     app.config.from_object(app_config)
 
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     init_firebase_app(app)
-    register_blueprints(app)
+    register_routes(app)
 
     return app
