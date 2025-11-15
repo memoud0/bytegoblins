@@ -9,30 +9,61 @@ library_bp = Blueprint("library", __name__)
 
 @library_bp.get("/library")
 def get_library():
-    username = request.args.get("username", "").strip()
+    """
+    GET /api/library?username=mo
+
+    Returns the user's library as Track[].
+    """
+    username = (request.args.get("username") or "").strip()
     if not username:
         return jsonify({"error": "username is required"}), 400
 
-    library_service = LibraryService()
-    tracks = library_service.get_library_tracks(username)
-    return jsonify({"tracks": [track.to_dict() for track in tracks]})
+    # keep consistent with /users/login behavior (lowercase)
+    username_norm = username.lower()
 
+    service = LibraryService()
+    tracks = service.get_library_tracks(username_norm)
+
+    # Assuming Track has a .to_dict() method; if not, we can adapt later.
+    return jsonify(
+        {
+            "username": username_norm,
+            "tracks": [t.to_dict() for t in tracks],
+        }
+    ), 200
+
+library_bp = Blueprint("library", __name__, url_prefix="/api")
 
 @library_bp.post("/library/add")
 def add_to_library():
-    payload = request.get_json(silent=True) or {}
-    username = str(payload.get("username") or "").strip()
-    track_id = str(payload.get("trackId") or "").strip()
-    source = str(payload.get("source") or "manual")
-    search_event_id = payload.get("searchEventId")
+    data = request.get_json(silent=True) or {}
 
-    if not username or not track_id:
-        return jsonify({"error": "username and trackId are required"}), 400
+    username = (data.get("username") or "").strip()
+    track_id = (data.get("trackId") or "").strip()
+    source = (data.get("source") or "manual").strip() or "manual"
+    search_event_id = data.get("searchEventId")
 
-    library_service = LibraryService()
+    if not username:
+        return jsonify({"error": "username is required"}), 400
+    if not track_id:
+        return jsonify({"error": "trackId is required"}), 400
+
+    username_norm = username.lower()
+    service = LibraryService()
+
     try:
-        track = library_service.add_to_library(username, track_id, source=source, search_event_id=search_event_id)
+        track = service.add_to_library(
+            username=username_norm,
+            track_id=track_id,
+            source=source,
+            search_event_id=search_event_id,
+        )
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        return jsonify({"error": str(exc)}), 404
 
-    return jsonify({"track": track.to_dict()})
+    return jsonify(
+        {
+            "username": username_norm,
+            "track": track.to_dict(),
+        }
+    ), 200
