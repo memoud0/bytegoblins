@@ -21,23 +21,20 @@ def login():
     snap = user_ref.get()
 
     if not snap.exists:
-        # new user
         user_ref.set(
             {
                 "username": username_norm,
                 "created_at": server_timestamp(),
-                "last_login_at": server_timestamp(),
+                "last_active_at": server_timestamp(),
             }
         )
-        created = True
     else:
-        # existing user
         user_ref.update(
             {
-                "last_login_at": server_timestamp(),
+                "last_active_at": server_timestamp(),
             }
         )
-        created = False
+
 
     # You can expand this response later with aggregates, preferences, etc.
     return jsonify(

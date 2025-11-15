@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, fields
 from datetime import datetime
 from typing import Any, Mapping
 
@@ -35,8 +35,19 @@ class UserProfile:
     def from_mapping(cls, username: str, data: Mapping[str, Any]) -> "UserProfile":
         payload = dict(data)
         payload["username"] = username
+
+        # Backwards compatibility: map last_login_at -> last_active_at if present
+        if "last_login_at" in payload and "last_active_at" not in payload:
+            payload["last_active_at"] = payload["last_login_at"]
+
+        # Ensure these maps are always present
         payload.setdefault("liked_genres", {})
         payload.setdefault("disliked_genres", {})
         payload.setdefault("feature_sums_liked", _default_feature_map())
         payload.setdefault("feature_sums_disliked", _default_feature_map())
-        return cls(**payload)
+
+        # Only keep fields that actually exist on the dataclass
+        allowed_fields = {f.name for f in fields(cls)}
+        filtered = {key: value for key, value in payload.items() if key in allowed_fields}
+
+        return cls(**filtered)
