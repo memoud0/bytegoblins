@@ -10,7 +10,7 @@ import addIcon from "../assets/add-icon-black.png";
 import fallbackCover from "../assets/albumCover-1.png";
 import { useUserId } from "../useUserId";
 
-const API_BASE = "bytegoblins.onrender.com/api";
+import { api } from "../api/api";
 
 type BackendTrack = {
   track_id: string;
@@ -84,23 +84,19 @@ function SearchPage() {
       params.set("q", q);
       params.set("limit", "4");
 
-      const res = await fetch(`${API_BASE}/songs/search?${params.toString()}`);
-      if (!res.ok) {
-        throw new Error(`Search failed (${res.status})`);
-      }
-
-      const data = (await res.json()) as SearchResponse;
+      const resp = await api.get<SearchResponse>(`/api/songs/search`, {
+        params: Object.fromEntries(params.entries()),
+      });
+      const data = resp.data as SearchResponse;
       setSearchEventId(data.searchEventId);
 
       const enriched: EnrichedSong[] = [];
       for (const t of data.tracks) {
         try {
-          const enrRes = await fetch(
-            `${API_BASE}/tracks/enriched?trackId=${encodeURIComponent(
-              t.track_id
-            )}`
-          );
-          const enrData = await enrRes.json();
+          const enrResp = await api.get(`/api/tracks/enriched`, {
+            params: { trackId: t.track_id },
+          });
+          const enrData = enrResp.data;
           const cover =
             enrData?.spotify?.album_image_url ??
             enrData?.track?.album_image_url ??
@@ -156,19 +152,14 @@ function SearchPage() {
     }
 
     try {
-        const res = await fetch(`${API_BASE}/match/like`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            username,
-            trackId: song.trackId,
-            source: "search", // or "manual" if you want
-        }),
+        const likeResp = await api.post(`/api/match/like`, {
+          username,
+          trackId: song.trackId,
+          source: "search",
         });
-
-        if (!res.ok) {
-        console.error("Like-from-search failed with status", res.status);
-        return;
+        if (likeResp.status >= 400) {
+          console.error("Like-from-search failed with status", likeResp.status);
+          return;
         }
 
         // Mark as added/liked in UI
