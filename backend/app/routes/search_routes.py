@@ -1,30 +1,32 @@
-from __future__ import annotations
+# app/routes/search_routes.py
+from flask import Blueprint, request, jsonify
 
-from flask import Blueprint, jsonify, request
-
-from app.services.search_service import SearchService
+from app.services.search_service import search_tracks
 
 search_bp = Blueprint("search", __name__)
 
 
-@search_bp.get("/songs/search")
-def search_songs():
-    username = request.args.get("username", "").strip()
-    query = request.args.get("q", "").strip()
-    limit_param = request.args.get("limit", "20")
+@search_bp.route("/songs/search")
+def songs_search():
+    """
+    Query params:
+      q: search string (required)
+      username or userId: current user (required)
 
-    if not username or not query:
-        return jsonify({"error": "username and q are required"}), 400
+    Returns:
+      { "results": SearchResultTrack[] }
+    """
+    q = request.args.get("q", type=str, default="")
+    user_id = request.args.get("username") or request.args.get("userId")
+
+    if not user_id:
+        return jsonify({"error": "username is required"}), 400
+
+    if not q.strip():
+        return jsonify({"results": []}), 200
 
     try:
-        limit = max(1, min(50, int(limit_param)))
-    except ValueError:
-        return jsonify({"error": "limit must be an integer"}), 400
-
-    search_service = SearchService()
-    try:
-        tracks, event_id = search_service.search(username, query, limit=limit)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-
-    return jsonify({"tracks": [track.to_dict() for track in tracks], "searchEventId": event_id})
+        results = search_tracks(user_id=user_id, raw_query=q)
+        return jsonify({"results": results}), 200
+    except Exception as e:
+        return jsonify({"error": "search_failed", "message": str(e)}), 500
