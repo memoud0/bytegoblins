@@ -1,22 +1,6 @@
 import { useEffect, useState } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
 import { useNavigate } from "react-router-dom";
 import "../App.css";
-import { useUserId } from "../useUserId";
-import { db } from "../firebase";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
-  Timestamp,
-} from "firebase/firestore";
-
-// import exploreBackground1 from "../assets/exploreBackground1.png";
-// import exploreBackground2 from "../assets/exploreBackground2.png";
-// import exploreBackground3 from "../assets/exploreBackground3.png";
 import albumCover1 from "../assets/albumCover-1.png";
 import albumCover2 from "../assets/albumCover-2.png";
 import albumCover3 from "../assets/albumCover-3.png";
@@ -32,7 +16,8 @@ interface Song {
   artist: string;
   album: string;
 }
- function ExplorePage() {
+
+function ExplorePage() {
   
   const songs = [
     { title: "Sienna", artist: "The Marías", image: albumCover1 },
@@ -135,7 +120,7 @@ interface Song {
             My profile
           </button>
         </div>
-        
+
       </div>
     </div>
   );
