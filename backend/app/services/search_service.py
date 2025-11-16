@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Tuple
+from typing import Any
 
 from app.firebase_client import get_firestore_client, server_timestamp
 from app.models import Track
@@ -37,13 +37,19 @@ class SearchService:
         pool_size = max(limit * 3, 40)
         candidate_tracks = self.track_service.search_tracks(query_norm, limit=pool_size)
 
-        scored: list[tuple[float, Track]] = []
+        # (text_score, popularity, Track)
+        scored: list[tuple[float, float, Track]] = []
         for t in candidate_tracks:
-            score = self._score_track(t, query_norm)
-            scored.append((score, t))
+            text_score = self._score_track(t, query_norm)
+            # optionally drop totally irrelevant ones
+            if text_score <= 0:
+                continue
+            popularity = float(t.popularity_norm or 0.0)
+            scored.append((text_score, popularity, t))
 
-        scored.sort(key=lambda x: x[0], reverse=True)
-        top_tracks = [t for score, t in scored[:limit]]
+        # sort: most popular first, then best text match
+        scored.sort(key=lambda x: (x[1], x[0]), reverse=True)
+        top_tracks = [t for _, _, t in scored[:limit]]
 
         search_event_id: str | None = None
         if username:
@@ -60,18 +66,16 @@ class SearchService:
 
     def _score_track(self, track: Track, query_norm: str) -> float:
         """
-        Very simple scoring:
+        Text relevance only:
         - strong weight if track name starts with query
         - medium weight if track name contains query
         - bonus if any artist name contains query
         - bonus if genre contains query
-        - small popularity bonus
         """
         name = (track.track_name_lowercase or track.track_name or "").lower()
         artists = [a.lower() for a in (track.artists or [])]
         genre = (track.track_genre or "").lower()
         genre_group = (track.track_genre_group or "").lower()
-        popularity = float(track.popularity_norm or 0.0)
 
         score = 0.0
 
@@ -87,8 +91,6 @@ class SearchService:
             score += 1.0
         if query_norm in genre_group:
             score += 0.5
-
-        score += popularity * 2.0  # small push for popular tracks
 
         return score
 

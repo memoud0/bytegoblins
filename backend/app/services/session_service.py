@@ -221,3 +221,48 @@ class SessionService:
         # Always update updated_at on save
         payload["updated_at"] = server_timestamp()
         self._session_ref(username, session.session_id).set(payload, merge=True)
+
+    def like_track_without_session(
+    self,
+    username: str,
+    track_id: str,
+    source: str = "search",
+) -> Track:
+        """
+        Record a 'like' for a track outside of any match session.
+
+        - Updates user aggregates via UserService.record_swipe
+        - Adds track to library via LibraryService.add_to_library
+        - Does NOT require a MatchSession or session_id from frontend
+        """
+        username = username.lower()
+
+        # Ensure user exists
+        self.user_service.ensure_user(username)
+
+        track = self.track_service.get_track(track_id)
+        if not track:
+            raise ValueError("Track not found.")
+
+        # Use a synthetic session/phase so aggregates stay consistent
+        synthetic_session_id = f"{source}-standalone"
+        phase = source  # e.g. "search"
+
+        # Record swipe as a "like"
+        self.user_service.record_swipe(
+            username=username,
+            session_id=synthetic_session_id,
+            track=track,
+            liked=True,
+            phase=phase,
+        )
+
+        # Add to library as well
+        self.library_service.add_to_library(
+            username=username,
+            track_id=track_id,
+            source=source,
+        )
+
+        return track
+
