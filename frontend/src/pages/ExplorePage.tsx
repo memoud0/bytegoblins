@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 // import reactLogo from './assets/react.svg'
 // import viteLogo from '/vite.svg'
+import { useNavigate } from "react-router-dom";
 import "../App.css";
 import { useUserId } from "../useUserId";
 import { db } from "../firebase";
@@ -21,6 +22,9 @@ import albumCover2 from "../assets/albumCover-2.png";
 import albumCover3 from "../assets/albumCover-3.png";
 import dislikeDefault from "../assets/dislike-button-default.png";
 import likeDefault from "../assets/like-button-default.png";
+import exploreBlack from "../assets/explore-black.png";
+import profileWhite from "../assets/profile-white.png";
+import searchWhite from "../assets/search-white.png";
 
 interface Song {
   id: string;
@@ -39,6 +43,7 @@ interface Song {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"explore" | "search" | "profile">("explore");
 
   const handleSwipe = (dir: "left" | "right") => {
     setSwipeDirection(dir);
@@ -58,6 +63,23 @@ interface Song {
   };
 
   const currentSong = songs[currentIndex];
+
+  const navigate = useNavigate();
+
+  const goToExplore = () => {
+    setActiveTab("explore");
+    navigate("/explore");
+  };
+
+  const goToSearch = () => {
+    setActiveTab("search");
+    navigate("/search");
+  };
+
+  const goToProfile = () => {
+    setActiveTab("profile");
+    navigate("/profile");
+  };
 
   return (
     <div className="page-wrapper">
@@ -85,12 +107,35 @@ interface Song {
           </div>
         </div>
 
-        <div className='menu'> 
-          <button className='menu-button'>Explore</button>
-          <button className='menu-button'>Search</button>
-          <button className='menu-button'>My profile</button>
-        </div>
+        <div className="menu"> 
+          <button
+            id="exploreButton"
+            className={`menu-button ${activeTab !== "explore" ? "not-current" : ""}`}
+            onClick={goToExplore}
+          >
+            <img src={exploreBlack} width="20" style={{ paddingRight: "10px" }} />
+            Explore
+          </button>
 
+          <button
+            id="searchButton"
+            className={`menu-button ${activeTab !== "search" ? "not-current" : ""}`}
+            onClick={goToSearch}
+          >
+            <img src={searchWhite} width="20" style={{ paddingRight: "10px" }} />
+            Search
+          </button>
+
+          <button
+            id="profileButton"
+            className={`menu-button ${activeTab !== "profile" ? "not-current" : ""}`}
+            onClick={goToProfile}
+          >
+            <img src={profileWhite} width="20" style={{ paddingRight: "10px" }} />
+            My profile
+          </button>
+        </div>
+        
       </div>
     </div>
   );

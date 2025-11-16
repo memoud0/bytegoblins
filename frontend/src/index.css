@@ -136,7 +136,15 @@ h1 {
 }
 
 .menu-button {
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.4); 
   margin: 10px;
+  cursor: pointer;                 
+}
+
+.not-current {
+  background-color: #ffffff00;
+  color: #fff;
+  box-shadow: none;
 }
 
 .button-white:hover {
@@ -231,6 +239,8 @@ h1 {
 .menu {
   bottom : 20px;
   margin : 20px;
+  margin-top : -25px;
+  transition : none;
 }
 
 /* swipe left */
