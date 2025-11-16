@@ -13,7 +13,6 @@ import { useUserId } from "../useUserId";
 // } from "firebase/firestore";
 
 import loginBackground from "../assets/loginBackground.png";
-import { api } from "../api/api";
 
 interface LoginPayload {
   username?: string;
@@ -73,8 +72,20 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const resp = await api.post<LoginPayload>(`/api/users/login`, { username: trimmed });
-      const payload = resp.data;
+      const response = await fetch("/api/users/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username: trimmed }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as LoginPayload | null;
+
+      if (!response.ok) {
+        const message = (payload && payload.error) || "Unable to sign in. Try again later.";
+        throw new Error(message);
+      }
 
       const normalized = (payload?.username || trimmed).toLowerCase();
       setUserId(normalized);
@@ -83,11 +94,11 @@ function LoginPage() {
         username: normalized,
         created: Boolean(payload?.created),
       });
-    } catch (err: any) {
-      // axios format: err.response?.data?.error
+    } catch (err) {
       console.error("handleLogin ERROR:", err);
-      const message = err?.response?.data?.error || (err instanceof Error ? err.message : null) || "Unable to sign in. Try again later.";
-      setErrorMessage(`${message} Try again later.`);
+      setErrorMessage(
+        err instanceof Error ? `${err.message} Try again later.` : "Unexpected error signing in. Try again later."
+      );
     } finally {
       setIsSubmitting(false);
     }

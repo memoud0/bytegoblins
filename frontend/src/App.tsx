@@ -4,14 +4,16 @@ import ExplorePage from "./pages/ExplorePage.tsx";
 import SearchPage from "./pages/SearchPage.tsx";
 import ProfilePage from "./pages/ProfilePage.tsx";
 import { useEffect } from "react";
-import { api } from "./api/api";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 function App() {
   useEffect(() => {
     async function pingBackend() {
       try {
-        const res = await api.get(`/api/health`);
-        console.log("Health check:", res.data);
+        const res = await fetch(`${API_URL}/api/health`);
+        const data = await res.json();
+        console.log("Health check:", data);
       } catch (err) {
         console.error("Health check failed:", err);
       }

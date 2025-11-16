@@ -10,7 +10,7 @@ import fallbackCover from "../assets/albumCover-1.png";
 import removeIcon from "../assets/remove-icon.png";
 import { useUserId } from "../useUserId";
 
-import { api } from "../api/api";
+const API_BASE = "http://127.0.0.1:5000/api";
 const CARD_HEIGHT_PX = 420; // keep both rectangles same height
 
 type PersonalityMetrics = {
@@ -96,8 +96,18 @@ function ProfilePage() {
       setPersonalityLoading(true);
       setPersonalityError(null);
       try {
-        const resp = await api.post<PersonalityResponse>(`/api/personality`, { username });
-        setPersonality(resp.data);
+        const res = await fetch(`${API_BASE}/personality`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`Personality failed (${res.status})`);
+        }
+
+        const data = (await res.json()) as PersonalityResponse;
+        setPersonality(data);
       } catch (err) {
         console.error("Failed to fetch personality:", err);
         setPersonalityError("Could not load your personality yet.");
@@ -110,15 +120,26 @@ function ProfilePage() {
       setLibraryLoading(true);
       setLibraryError(null);
       try {
-        const resp = await api.get(`/api/library`, { params: { username } });
-        const data = resp.data;
+        const res = await fetch(
+          `${API_BASE}/library?username=${encodeURIComponent(username)}`
+        );
+        if (!res.ok) {
+          throw new Error(`Library failed (${res.status})`);
+        }
+
+        const data = await res.json();
+        // Expecting { username, tracks: BackendTrack[] }
         const tracks = (data.tracks || []) as BackendTrack[];
 
         const enriched: LibrarySong[] = [];
         for (const t of tracks) {
           try {
-            const enrResp = await api.get(`/api/tracks/enriched`, { params: { trackId: t.track_id } });
-            const enrData = enrResp.data;
+            const enrRes = await fetch(
+              `${API_BASE}/tracks/enriched?trackId=${encodeURIComponent(
+                t.track_id
+              )}`
+            );
+            const enrData = await enrRes.json();
             const cover =
               enrData?.spotify?.album_image_url ??
               enrData?.track?.album_image_url ??
@@ -164,9 +185,15 @@ const handleRemoveFromLibrary = async (trackId: string) => {
   }
 
   try {
-    const resp = await api.delete(`/api/library/${encodeURIComponent(trackId)}`, { params: { username } });
-    if (resp.status >= 400) {
-      console.error("Remove from library failed with status", resp.status);
+    const res = await fetch(
+      `${API_BASE}/library/${encodeURIComponent(
+        trackId
+      )}?username=${encodeURIComponent(username)}`,
+      { method: "DELETE" }
+    );
+
+    if (!res.ok) {
+      console.error("Remove from library failed with status", res.status);
       return;
     }
 
