@@ -9,8 +9,9 @@ import background from "../assets/profile-background.png";
 import fallbackCover from "../assets/albumCover-1.png";
 import removeIcon from "../assets/remove-icon.png";
 import { useUserId } from "../useUserId";
+import { API_URL } from "../api";
 
-const API_BASE = "http://127.0.0.1:5000/api";
+const API_BASE = `${API_URL}/api`;
 const CARD_HEIGHT_PX = 420; // keep both rectangles same height
 
 type PersonalityMetrics = {

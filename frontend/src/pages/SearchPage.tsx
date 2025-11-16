@@ -10,7 +10,9 @@ import addIcon from "../assets/add-icon-black.png";
 import fallbackCover from "../assets/albumCover-1.png";
 import { useUserId } from "../useUserId";
 
-const API_BASE = "bytegoblins.onrender.com/api";
+import { API_URL } from "../api";
+
+const API_BASE = `${API_URL}/api`;
 
 type BackendTrack = {
   track_id: string;

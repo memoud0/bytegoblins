@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
+import { API_URL } from "../api";
 import { useUserId } from "../useUserId";
 // import { db } from "../firebase";
 // import {
@@ -72,7 +73,7 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/users/login", {
+      const response = await fetch(`${API_URL}/api/users/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
