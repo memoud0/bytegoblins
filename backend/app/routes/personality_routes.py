@@ -4,20 +4,22 @@ from flask import Blueprint, jsonify, request
 
 from app.services.personality_service import PersonalityService
 
-personality_bp = Blueprint("personality", __name__)
+personality_bp = Blueprint("personality", __name__, url_prefix="/api/personality")
 
 
-@personality_bp.post("/personality")
-def generate_personality():
-    payload = request.get_json(silent=True) or {}
-    username = str(payload.get("username") or "").strip()
+@personality_bp.post("")
+def compute_personality():
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip().lower()
+
     if not username:
         return jsonify({"error": "username is required"}), 400
 
     service = PersonalityService()
     try:
-        result = service.generate(username)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        result = service.compute_for_user(username)
+    except Exception as exc:  # noqa: BLE001
+        print("Error computing personality:", exc)
+        return jsonify({"error": "Failed to compute personality"}), 500
 
-    return jsonify(result.to_dict())
+    return jsonify(result.to_dict()), 200

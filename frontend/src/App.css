@@ -1,5 +1,4 @@
 #root {
-  max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
@@ -40,3 +39,36 @@
 .read-the-docs {
   color: #888;
 }
+
+.library-card {
+  /* adjust as needed to match your layout */
+  max-height: 420px;        /* height of the whole rectangle */
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 32px;
+  backdrop-filter: blur(20px);
+}
+
+/* Inner scrollable area */
+.library-list {
+  margin-top: 12px;
+  overflow-y: auto;
+  max-height: 320px;        /* height available for rows inside card */
+  padding-right: 8px;       /* so scrollbar doesn't cover content */
+}
+
+/* Optional: nice custom scrollbar */
+.library-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.library-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.library-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+}
+
