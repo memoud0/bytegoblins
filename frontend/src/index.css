@@ -91,8 +91,10 @@ body {
 }
 
 h1 {
+  font-family: "Lexend", sans-serif;
   font-size: 3.2em;
   line-height: 1.1;
+  text-shadow: 0px 5px 10px rgba(0, 0, 0, 0.35)
 }
 
 .button-white {
@@ -123,13 +125,116 @@ h1 {
 }
 
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
+.music-card {
+  font-family: "Lexend", sans-serif;
+  display: block;
+  margin: 50px;
+  margin-top: 20px;
+  border-radius: 50px; 
+  background-color: hsla(0, 0%, 0%, 0.5);
+  text-align: center;
+  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); 
+  transition: all 0.5s ease;
+}
 
+/* swipe left */
+.music-card.left {
+  transform: translateX(-450px) rotate(-18deg) scale(0.9);
+  opacity: 0;
+}
+
+/* swipe right */
+.music-card.right {
+  transform: translateX(450px) rotate(18deg) scale(0.9);
+  opacity: 0;
+}
+
+.album-cover {
+  display: block;
+  margin: 30px;
+  margin-bottom: 20px;
+  border-radius: 25px; 
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); 
+}
+.page-wrapper {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  transition: all 0.5s ease;
+}
+
+.bg-blur {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 160%;
+  height: auto;
+  transform: translate(-50%, -50%);
+  filter: blur(30px) brightness(80%);
+  object-fit: cover;
+  z-index: -1;   
+  transition: all 0.5s ease;
+}
+
+.content {
+  position: relative;
+  z-index: 10;   
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.song-title {
+  color: hwb(0 100% 0% / 1);
+  font-size: 36px;
+  font-weight: bold;
+}
+
+.song-artist {
+  color: hwb(0 100% 0% / 0.75);
+  font-size: 20px;
+}
+
+.dislike-button, .like-button {
+  padding: 25px;
+  transition: all 0.4s ease;
+  display: inline-block;
+  align-items: center;
+}
+
+.dislike-button:hover, .like-button:hover {
+  transform: translateY(-4px);
+  transition: all 0.24s ease;
+}
+
+.dislike-button:active, .like-button:active {
+  transform: translateY(0);                 /* back to original position */
+  transition: all 0.4s ease;
+}
+
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 14px 22px;
+  color: white;
+  border-radius: 25px;
+  font-size: 1.05rem;
+  opacity: 0;
+  animation: toastIn 0.5s forwards;
+  z-index: 999;
+}
+
+@keyframes toastIn {
+  from {
+    transform: translateY(15px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
