@@ -24,12 +24,9 @@ def get_library():
     tracks = service.get_library_tracks(username_norm)
 
     # Assuming Track has a .to_dict() method; if not, we can adapt later.
-    return jsonify(
-        {
-            "username": username_norm,
-            "tracks": [t.to_dict() for t in tracks],
-        }
-    ), 200
+    return jsonify({"username": username_norm, "tracks": [t.to_dict() for t in tracks]}), 200
+
+library_bp = Blueprint("library", __name__, url_prefix="/api")
 
 @library_bp.post("/library/add")
 def add_to_library():

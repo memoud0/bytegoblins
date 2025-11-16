@@ -41,9 +41,13 @@ backend/
 
 ## Spotify Integration Notes
 
-- `SpotifyService` implements the Client Credentials grant and exposes `/api/songs/preview`.
+- `SpotifyService` implements the Client Credentials grant and powers `/api/tracks/enriched` for preview audio + album art.
 - Provide `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, and `SPOTIFY_REDIRECT_URI` in the environment.
 - Extend `app/routes/spotify_routes.py` for additional endpoints (playlists, recommendations, etc.).
+
+### Preview fallback helper
+
+- When Spotify omits its own 30s snippet, `ItunesPreviewService` (see `app/services/itunes_preview_service.py`) queries the public iTunes Search API to recover a playable sample, so no extra tooling or Node packages are required.
 
 ## Firebase Integration Notes
 

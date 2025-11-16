@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 
 from app.services.spotify_service import SpotifyService
 from app.services.track_service import TrackService
@@ -9,7 +10,7 @@ spotify_bp = Blueprint("spotify", __name__, url_prefix="/api/tracks")
 
 
 @spotify_bp.get("/enriched")
-def get_enriched_track() -> tuple[tuple[dict, int], int] | tuple[dict, int]:
+def get_enriched_track() -> ResponseReturnValue:
     """
     GET /api/tracks/enriched?trackId=SPOTIFY_TRACK_ID
 
@@ -38,7 +39,7 @@ def get_enriched_track() -> tuple[tuple[dict, int], int] | tuple[dict, int]:
 
     try:
         # 2) Enrich with Spotify metadata
-        spotify_info = spotify_service.get_track_details(track_id)
+        spotify_info = spotify_service.get_track_details(track_id, track_metadata=track)
     except Exception as exc:  # requests errors, auth errors, etc.
         return (
             jsonify(

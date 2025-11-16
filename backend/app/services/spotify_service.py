@@ -6,6 +6,9 @@ from typing import Any
 import requests
 from flask import current_app
 
+from app.models.track import Track
+from app.services.itunes_preview_service import ItunesPreviewService
+
 
 class SpotifyService:
     def __init__(self) -> None:
@@ -34,7 +37,7 @@ class SpotifyService:
         self._token_expires_at = time.time() + data["expires_in"]
         return self._access_token
 
-    def get_track_details(self, spotify_track_id: str) -> dict[str, Any]:
+    def get_track_details(self, spotify_track_id: str, track_metadata: Track | None = None) -> dict[str, Any]:
         """
         Fetch preview_url + album cover for a track.
         """
@@ -51,9 +54,20 @@ class SpotifyService:
         images = album.get("images") or []
         image_url = images[0]["url"] if images else None
 
+        preview_url = data.get("preview_url")
+        preview_source = "spotify"
+        spotify_url = data.get("external_urls", {}).get("spotify")
+        if not preview_url and track_metadata is not None:
+            itunes_service = ItunesPreviewService()
+            fallback_url, fallback_source = itunes_service.get_preview(track_metadata)
+            if fallback_url:
+                preview_url = fallback_url
+                preview_source = fallback_source or "itunes"
+
         return {
             "spotify_id": spotify_track_id,
-            "preview_url": data.get("preview_url"),
+            "preview_url": preview_url,
             "album_image_url": image_url,
-            "spotify_url": data.get("external_urls", {}).get("spotify"),
+            "spotify_url": spotify_url,
+            "preview_source": preview_source,
         }
