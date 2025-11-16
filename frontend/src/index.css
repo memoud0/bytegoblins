@@ -253,7 +253,7 @@ h1 {
 }
 
 
-.music-card, .menu {
+.music-card, .menu, .personality-card, .library-card {
   font-family: "Lexend", sans-serif;
   display: block;
   margin: 50px;
@@ -266,11 +266,22 @@ h1 {
   transition: all 0.5s ease;
 }
 
+.personality-card {
+  flex: 3;
+}
+
+.library-card {
+  display: flex;             
+  flex-direction: column;   
+  align-items: center; 
+  justify-content: flex-start;
+  text-align: center;
+  margin: 0px;
+  min-width: 50%;
+  overflow-y: scroll;
+}
+
 .menu {
-  /* position: absolute;
-  top: 94%;
-  display: flex;
-  gap: 10px; */
   position: fixed;
   top: 88%;
   left: 50%;
@@ -280,17 +291,14 @@ h1 {
   z-index: 999; /* make sure it's on top */
 }
 
-
 .music-card-search {
   font-family: "Lexend", sans-serif;
   background-color: hsla(0, 0%, 0%, 0.5);
   border-radius: 40px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); 
   transition: all 0.5s ease;
-
   padding: 20px;                  /* spacing inside card */
   margin: 0;                      /* no collapsed margins */
-  
   display: flex;
   flex-direction: column;
   align-items: center;            /* centers everything */
@@ -420,6 +428,60 @@ h1 {
   gap: 12px;
   width: 70%;
 }
+
+.profile-row {
+  display: flex;
+  align-items: top;
+  width: 90%;
+}
+
+.personality-title {
+  font-family: "Lexend", sans-serif;
+  font-weight: bold !important;
+  font-size: 32px;
+  padding-top: 20px;
+  margin: 20px;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.personality-text {
+  font-family: "Lexend", sans-serif;
+  font-size: 16px;
+  padding: 30px;
+  padding-top: 0;
+  color: #fff;
+  text-align: justify;
+  line-height: 1.75;
+}
+
+.library-title {
+  font-family: "Lexend", sans-serif;
+  font-weight: bold !important;
+  font-size: 20px;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.library-text {
+  font-family: "Lexend", sans-serif;
+  font-size: 16px;
+  padding-top: 0;
+  color: #fff;
+  text-align: justify;
+}
+
+.library-row {
+  width: 90%;
+  display: grid;
+  grid-template-columns: 60px 1fr 1fr auto;
+  align-items: center;
+  gap: 20px;
+  padding: 0px;
+  margin: 10px 0;
+  border-bottom: 1px solid #ffffff80;
+}
+
 
 
 @keyframes toastIn {
