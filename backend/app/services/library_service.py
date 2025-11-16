@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from firebase_admin import firestore
+
 from app.firebase_client import get_firestore_client, server_timestamp
 from app.models import Track
 from app.services.track_service import TrackService
@@ -12,7 +14,7 @@ class LibraryService:
 
     def get_library_tracks(self, username: str) -> list[Track]:
         user_ref = self.db.collection("users").document(username)
-        library_ref = user_ref.collection("library")
+        library_ref = user_ref.collection("library").order_by("added_at", direction=firestore.Query.DESCENDING)
         entries = list(library_ref.stream())
         track_ids = [doc.id for doc in entries]
         tracks = self.track_service.get_tracks_by_ids(track_ids)

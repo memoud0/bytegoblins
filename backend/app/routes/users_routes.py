@@ -1,31 +1,45 @@
-from __future__ import annotations
-
+# app/routes/users_routes.py
 from flask import Blueprint, jsonify, request
+from app.firebase_client import get_firestore_client, server_timestamp
 
-from app.services.user_service import UserService
-from app.utils.serialization import to_iso
-
-users_bp = Blueprint("users", __name__)
+users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
 
-@users_bp.post("/users/login")
-def login_user():
-    payload = request.get_json(silent=True) or {}
-    username = str(payload.get("username") or "").strip()
+@users_bp.post("/login")
+def login():
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+
     if not username:
         return jsonify({"error": "username is required"}), 400
 
-    user_service = UserService()
-    profile = user_service.ensure_user(username)
+    # normalize username (optional: lowercase to avoid duplicates)
+    username_norm = username.lower()
 
+    db = get_firestore_client()
+    user_ref = db.collection("users").document(username_norm)
+    snap = user_ref.get()
+
+    if not snap.exists:
+        user_ref.set(
+            {
+                "username": username_norm,
+                "created_at": server_timestamp(),
+                "last_active_at": server_timestamp(),
+            }
+        )
+    else:
+        user_ref.update(
+            {
+                "last_active_at": server_timestamp(),
+            }
+        )
+
+
+    # You can expand this response later with aggregates, preferences, etc.
     return jsonify(
         {
-            "username": profile.username,
-            "createdAt": to_iso(profile.created_at),
-            "lastActiveAt": to_iso(profile.last_active_at),
-            "likesCount": profile.likes_count,
-            "dislikesCount": profile.dislikes_count,
-            "likedGenres": profile.liked_genres,
-            "dislikedGenres": profile.disliked_genres,
+            "username": username_norm,
+            "created": created,
         }
-    )
+    ), 200

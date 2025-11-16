@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from flask import Flask, current_app
 
+import json
+
+import os
 try:
     import firebase_admin
     from firebase_admin import credentials, firestore
@@ -53,12 +55,28 @@ def get_firestore_client(app: Flask | None = None):
     return firestore.client(firebase_app)
 
 
-def server_timestamp() -> datetime:
-    """Consistent UTC timestamps for Firestore documents."""
-    return datetime.now(timezone.utc)
+def server_timestamp() -> Any:
+    """Return Firestore's server timestamp sentinel for consistent ordering."""
+    if firestore is None:
+        raise RuntimeError("firebase-admin is not installed; cannot create server timestamps.")
+    return firestore.SERVER_TIMESTAMP
 
 
 def _build_cred_payload(app: Flask) -> dict[str, str]:
+    """
+    Build the credential payload for Firebase.
+
+    Preferred: load from GOOGLE_APPLICATION_CREDENTIALS JSON file.
+    Fallback: build from individual env vars (FIREBASE_*).
+    """
+    keyfile_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+    # Preferred path: load the real service account JSON
+    if keyfile_path and os.path.exists(keyfile_path):
+        with open(keyfile_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    # Fallback to env-based construction (only if needed)
     private_key = app.config.get("FIREBASE_PRIVATE_KEY") or ""
     if "\\n" in private_key:
         private_key = private_key.replace("\\n", "\n")
@@ -75,3 +93,4 @@ def _build_cred_payload(app: Flask) -> dict[str, str]:
         "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
         "client_x509_cert_url": "",
     }
+
