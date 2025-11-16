@@ -4,27 +4,52 @@ from flask import Blueprint, jsonify, request
 
 from app.services.search_service import SearchService
 
-search_bp = Blueprint("search", __name__)
+# This is what routes/__init__.py imports:
+# from .search_routes import search_bp
+search_bp = Blueprint("search", __name__, url_prefix="/api/songs")
 
 
-@search_bp.get("/songs/search")
+@search_bp.get("/search")
 def search_songs():
-    username = request.args.get("username", "").strip()
-    query = request.args.get("q", "").strip()
-    limit_param = request.args.get("limit", "20")
+    """
+    GET /api/songs/search?username=<username>&q=<query>&limit=<n>
 
-    if not username or not query:
-        return jsonify({"error": "username and q are required"}), 400
+    Response:
+    {
+      "username": "gomgomu",
+      "query": "love",
+      "searchEventId": "abcd123",
+      "tracks": [ Track, ... ]
+    }
+    """
+    query = (request.args.get("q") or "").strip()
+    username = (request.args.get("username") or "").strip().lower() or None
+    limit_raw = (request.args.get("limit") or "").strip()
 
     try:
-        limit = max(1, min(50, int(limit_param)))
+        limit = int(limit_raw) if limit_raw else 20
     except ValueError:
-        return jsonify({"error": "limit must be an integer"}), 400
+        limit = 20
 
-    search_service = SearchService()
+    if not query:
+        return jsonify({"error": "q (query) is required"}), 400
+
+    service = SearchService()
     try:
-        tracks, event_id = search_service.search(username, query, limit=limit)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        tracks, search_event_id = service.search_songs(
+            query=query,
+            username=username,
+            limit=limit,
+        )
+    except Exception as exc:  # basic safety
+        print("Error during search:", exc)
+        return jsonify({"error": "Search failed"}), 500
 
-    return jsonify({"tracks": [track.to_dict() for track in tracks], "searchEventId": event_id})
+    return jsonify(
+        {
+            "username": username,
+            "query": query,
+            "searchEventId": search_event_id,
+            "tracks": [t.to_dict() for t in tracks],
+        }
+    ), 200
