@@ -37,7 +37,7 @@ class TrackService:
     def get_seed_tracks(self, exclude_track_ids: set[str], limit: int = 12) -> list[Track]:
         query = (
             self.db.collection("tracks")
-            .where("popularity_norm", ">=", 0.88)
+            .where("popularity_norm", ">=", 0.75)
             .order_by("popularity_norm", direction=firestore.Query.DESCENDING)
             .limit(400)
         )

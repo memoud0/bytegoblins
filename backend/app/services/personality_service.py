@@ -229,106 +229,92 @@ class PersonalityService:
         base_short: str,
         base_long: str,
     ) -> str:
+        """Build the exact prompt to send to the LLM based on the user's spec.
+
+        The prompt instructs the model to return only the required JSON and to
+        avoid mentioning numbers, algorithms, or how the inference was done.
         """
-        Build a highly relatable, modern, personality-focused prompt for the LLM.
-
-        metrics: {
-            "avg_energy": float,
-            "avg_valence": float,
-            "avg_popularity_norm": float,
-            "genre_diversity": float,
-            "top_genres": [str, ...]
-        }
-
-        top_tracks: list of {
-            "track_name": str,
-            "artists": [str, ...],
-            "genre": str | None
-        }
-        """
-        avg_energy = metrics.get("avg_energy")
-        avg_valence = metrics.get("avg_valence")
-        avg_pop = metrics.get("avg_popularity_norm")
-        genre_div = metrics.get("genre_diversity")
-        top_genres = metrics.get("top_genres") or []
-
+        # Build track lines
         track_lines: list[str] = []
         for t in top_tracks:
-            name = t.get("track_name", "Unknown title")
-            artists = ", ".join(t.get("artists") or [])
-            genre = t.get("genre")
-            if genre:
-                track_lines.append(f"- {name} — {artists} (genre: {genre})")
-            else:
-                track_lines.append(f"- {name} — {artists}")
+            artists = ", ".join(t.get("artists", [])) if t.get("artists") else "unknown artist"
+            name = t.get("track_name", "unknown track")
+            track_lines.append(f"{name} — {artists}")
 
-        top_genres_str = ", ".join(top_genres) if top_genres else "none"
+        top_genres_str = ", ".join(metrics.get("top_genres", [])) if metrics.get("top_genres") else ", ".join([])
 
-        return f"""
+        prompt = """
 You are generating a music-based personality profile for a user.
 
-Your tone should feel like:
-- a close friend psychoanalyzing their Spotify at 2 AM,
-- a mix of Spotify Wrapped energy, astrology memes, and warm insight,
-- playful but never cringe,
-- modern, internet-aware, and specific.
+I still wanna keep the avg at the end, BUT DO NOT MENTION THEM IN THE PARAGRAPH
+Tone:
+- like a close friend reading their Spotify receipts out loud at 2 AM
+- playful, a little teasing, very human
+- funny without being cringe
+- concise but vivid — QUALITY over quantity
 
-Do NOT mention algorithms, math, scores, or how metrics were computed.
-Do NOT moralize or judge taste.
-Do NOT add markdown or extra commentary around the JSON.
+Do NOT mention:
+- numbers, scores, stats, averages, metrics, algorithms, or “your data”
+- how anything was calculated or inferred
+- “representative tracks” as a concept; just use them naturally
 
-Ground everything in:
-- the numeric metrics,
-- the top genres,
-- and especially the specific tracks and artists below.
+Base everything on:
+- the genres
+- the emotional vibe of the specific songs and artists
+- the archetype seed (vibe direction, not a script)
 
-You are starting from this seed archetype:
+You’re starting from this seed archetype:
 - archetype_id: {archetype_id}
 - title: {title}
 - base_short: {base_short}
 - base_long: {base_long}
 
-It's OK to slightly rename/refine the archetypeId and title if the vibe suggests a better fit,
-but keep it in the same spirit.
+You may slightly rename/refine the archetypeId and title if the vibe suggests it — keep it spiritually aligned.
 
------------------------------------------
+Write a personality portrait that feels intuitive, warm, and eerily accurate. Focus on emotional tendencies, habits, little quirks, contradictions, “you seem like the kind of person who…” observations. Let the songs guide you. Stay concise and punchy.
+
+Think: “you definitely have a soft spot for songs that feel like X,” “you give off ‘main character walking home at night’ energy,” “you pretend you’re chill but your playlist says otherwise,” etc.
+
+Avoid long paragraphs; keep it tight and high-quality.
+
+-----------------------------------------------------
 USER: {username}
 
-LISTENING PROFILE:
-- Average energy: {avg_energy:.2f}
-- Average mood / valence: {avg_valence:.2f}
-- Mainstream level (popularity_norm): {avg_pop:.2f}
-- Genre diversity (0–1): {genre_div:.2f}
-- Top genres: {top_genres_str}
+TRACKS THEY LOVE:
+{tracks_block}
 
-Representative tracks (these are strong signals of their taste):
-{chr(10).join(track_lines)}
+TOP GENRES:
+{top_genres}
 
------------------------------------------
+(You see the metrics below but NEVER reference them directly.)
+- avg_energy: {avg_energy:.2f}
+- avg_valence: {avg_valence:.2f}
+- avg_popularity_norm: {avg_pop:.2f}
+- genre_diversity: {genre_div:.2f}
+-----------------------------------------------------
 
-Write a personality profile that feels emotionally intuitive and extremely relatable.
-Interpret the *vibe* behind these metrics and songs — not just the numbers.
-Make subtle, specific observations (e.g., “you definitely have a walking-home-at-night playlist”
-or “you like songs that sound like they were recorded in a bedroom at 2 AM”).
-
-Tone guidelines:
-- casual, warm, slightly teasing, but respectful
-- hyper-specific and vibe-driven
-- confident, poetic in small doses, but not overdramatic
-- feel like you're actually describing a real person’s musical identity
-- celebrate contradictions (people love this)
-
------------------------------------------
-RETURN ONLY THIS JSON OBJECT, NOTHING ELSE:
+RETURN ONLY THIS JSON:
 
 {{
   "archetypeId": "STRING_ID_LIKE_SUNLIT_GROOVE_PILOT",
-  "title": "Short human-readable archetype name (2–5 words)",
-  "shortDescription": "1 sentence summarizing their vibe.",
-  "longDescription": "3–6 sentences deeply interpreting their taste. Reference genres, mood, energy, mainstream-ness, and some of the representative tracks."
+  "title": "Short archetype name (2–5 words)",
+  "shortDescription": "A fun, sharp 1-sentence vibe read.",
+  "longDescription": "3–6 sentences describing their personality and emotional aesthetic based purely on the feel of their songs and genres. No stats. Funny, familiar, specific, but concise."
 }}
------------------------------------------
-"""
+    """.format(
+            username=username,
+            tracks_block="\n".join(track_lines),
+            top_genres=top_genres_str,
+            avg_energy=metrics.get("avg_energy", 0.5),
+            avg_valence=metrics.get("avg_valence", 0.5),
+            avg_pop=metrics.get("avg_popularity_norm", 0.5),
+            genre_div=metrics.get("genre_diversity", 0.0),
+            archetype_id=archetype_id,
+            title=title,
+            base_short=base_short,
+            base_long=base_long,
+        )
+        return prompt
 
     def _maybe_call_llm(
         self,
@@ -345,7 +331,17 @@ RETURN ONLY THIS JSON OBJECT, NOTHING ELSE:
         If no API key or if the call fails, return None and fall back to rule-based text.
         """
         if self._openai_client is None:
-            return None
+            # No LLM key available — produce a compact, friendly fallback that
+            # follows the requested constraints (no numbers in prose, concise, playful).
+            return self._fallback_personality(
+                username=username,
+                archetype_id=archetype_id,
+                title=title,
+                base_short=base_short,
+                base_long=base_long,
+                representative_tracks=representative_tracks,
+                metrics=metrics,
+            )
 
         metrics_dict = metrics.to_dict()
 
@@ -412,4 +408,81 @@ RETURN ONLY THIS JSON OBJECT, NOTHING ELSE:
             )
         except Exception as exc:  # noqa: BLE001
             print("LLM personality generation failed:", exc)
-            return None
+            return self._fallback_personality(
+                username=username,
+                archetype_id=archetype_id,
+                title=title,
+                base_short=base_short,
+                base_long=base_long,
+                representative_tracks=representative_tracks,
+                metrics=metrics,
+            )
+
+    def _fallback_personality(
+        self,
+        username: str,
+        archetype_id: str,
+        title: str,
+        base_short: str,
+        base_long: str,
+        representative_tracks: list[Track],
+        metrics: PersonalityMetrics,
+    ) -> PersonalityResult:
+        """Rule-based fallback that respects the user's constraints.
+
+        - No numeric stats in prose
+        - Tone: close friend, playful, concise
+        - Use genres and representative tracks naturally
+        """
+        # Build a punchy short description
+        genres = metrics.top_genres or []
+        genre_phrase = ", ".join(genres[:2]) if genres else None
+
+        artists = [a for t in representative_tracks for a in (t.artists or [])][:3]
+        artist_phrase = ", ".join(artists) if artists else None
+
+        short_candidates: list[str] = []
+        if genre_phrase and artist_phrase:
+            short_candidates.append(f"A midnight mixtape person — {genre_phrase} leanings with a soft spot for {artist_phrase}.")
+        if genre_phrase:
+            short_candidates.append(f"You’ve got a {genre_phrase}-tilted heart with sneaky main-character energy.")
+        if artist_phrase:
+            short_candidates.append(f"You nod along to {artist_phrase} like it's a private joke.")
+        short_description = short_candidates[0] if short_candidates else base_short
+
+        # Build a 3-5 sentence long description without numbers
+        sentences: list[str] = []
+        # opener
+        sentences.append(short_description)
+
+        # habit/quirk line using tracks
+        if representative_tracks:
+            t = representative_tracks[0]
+            s = f"You bookmark songs that feel like small scenes — {t.track_name} shows up when you want to feel seen."
+            sentences.append(s)
+
+        if genre_phrase:
+            sentences.append(f"There’s a clear flavour in your queue: {genre_phrase}, which shows up when you need to switch moods fast.")
+        else:
+            sentences.append("Your taste slips between moods in a way that never feels random.")
+
+        # little contradiction / tease
+        sentences.append("You pretend you’re chill, but your playlist keeps giving away the part of you that never sleeps.")
+
+        # close with a warm line
+        sentences.append("Short, sharp, and oddly comforting — the kind of music that reads like a good late-night conversation.")
+
+        # Keep it concise: 3-6 sentences (we already built several)
+        long_description = " ".join(sentences[:6])
+
+        representative_track_ids = [t.track_id for t in representative_tracks]
+
+        return PersonalityResult(
+            username=username,
+            archetype_id=archetype_id,
+            title=title,
+            short_description=short_description,
+            long_description=long_description,
+            metrics=metrics,
+            representative_track_ids=representative_track_ids,
+        )
