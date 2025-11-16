@@ -34,7 +34,7 @@ def get_enriched_track():
     if not track:
         return jsonify({"error": "Track not found"}), 404
 
-    spotify_info = spotify_service.get_track_details(track_id)
+    spotify_info = spotify_service.get_track_details(track_id, track_metadata=track)
 
     return jsonify(
         {
