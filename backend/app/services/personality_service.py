@@ -19,6 +19,9 @@ class PersonalityService:
         self.db = get_firestore_client()
         self.library_service = LibraryService()
 
+        # Fixed display title for all personality cards
+        self.MUSIC_PERSONA_TITLE = "Your Music Persona"
+
         api_key = os.getenv("OPENAI_API_KEY")
         # if no key, client will raise on use; we guard before calling
         self._openai_client = OpenAI(api_key=api_key) if api_key else None
@@ -162,6 +165,8 @@ class PersonalityService:
                 representative_tracks=representative_tracks,
             )
             if llm_result is not None:
+                # Ensure the returned LLM result uses the unified display title
+                llm_result.title = self.MUSIC_PERSONA_TITLE
                 return llm_result
 
         representative_track_ids = [t.track_id for t in representative_tracks]
@@ -169,7 +174,7 @@ class PersonalityService:
         return PersonalityResult(
             username=username,
             archetype_id=archetype_id,
-            title=title,
+            title=self.MUSIC_PERSONA_TITLE,
             short_description=base_short,
             long_description=base_long,
             metrics=metrics,
@@ -391,16 +396,19 @@ RETURN ONLY THIS JSON:
             data = json.loads(content)
 
             final_archetype_id = data.get("archetypeId", archetype_id)
-            final_title = data.get("title", title)
             final_short = data.get("shortDescription", base_short)
             final_long = data.get("longDescription", base_long)
+            # Derive a concise title that matches the short description so the
+            # displayed title feels aligned with the paragraph.
+            candidate_title = data.get("title")
+            final_title = self._derive_title_from_text(final_short, candidate_title or title)
 
             representative_track_ids = [t.track_id for t in representative_tracks]
 
             return PersonalityResult(
                 username=username,
                 archetype_id=final_archetype_id,
-                title=final_title,
+                title=self.MUSIC_PERSONA_TITLE,
                 short_description=final_short,
                 long_description=final_long,
                 metrics=metrics,
@@ -417,6 +425,59 @@ RETURN ONLY THIS JSON:
                 representative_tracks=representative_tracks,
                 metrics=metrics,
             )
+
+    def _derive_title_from_text(self, short_description: str, fallback: str) -> str:
+        """Derive a short (2-4 word) title from the short_description.
+
+        Heuristic: split into words, remove common stopwords/punctuation, take up
+        to 4 significant words and Title-Case them. If that fails, return the
+        fallback title.
+        """
+        if not short_description:
+            return fallback
+
+        stopwords = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "your",
+            "you",
+            "like",
+            "that",
+            "this",
+            "with",
+            "for",
+            "to",
+            "in",
+            "of",
+            "on",
+            "it",
+        }
+
+        # normalize and split
+        import re
+
+        cleaned = re.sub(r"[^\w\s]", " ", short_description)
+        words = [w.strip() for w in cleaned.split() if w.strip()]
+        sig = [w for w in words if w.lower() not in stopwords]
+        if not sig:
+            sig = words
+
+        # pick up to 3 words (keep title short and punchy)
+        picked = sig[:3]
+        if not picked:
+            return fallback
+
+        title = " ".join(w.capitalize() for w in picked)
+        # Minor length safeguard: prefer very short titles; if too long, try fewer words
+        if len(title) > 30 and len(picked) > 1:
+            title = " ".join(w.capitalize() for w in picked[:2])
+        if len(title) > 30:
+            return fallback
+        return title
 
     def _fallback_personality(
         self,

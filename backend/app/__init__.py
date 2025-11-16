@@ -4,7 +4,8 @@ from flask_cors import CORS
 from .config import get_config
 from .firebase_client import init_firebase_app
 from .routes import register_routes
-
+from flask import Flask
+from flask_cors import CORS
 
 def create_app(config_name: str | None = None) -> Flask:
     """Application factory so tests and CLI share consistent setup."""
