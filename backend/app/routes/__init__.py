@@ -11,6 +11,7 @@ from .register_routes import register_routes
 from .debug_routes import debug_bp
 from .track_routes import tracks_bp
 from .spotify_routes import spotify_bp
+from .personality_routes import personality_bp
 
 # def register_routes(app: Flask) -> None:
 #     blueprints: list[Blueprint] = [
@@ -34,3 +35,5 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(match_bp)
     app.register_blueprint(tracks_bp)
     app.register_blueprint(spotify_bp)
+    app.register_blueprint(personality_bp)
+    
