@@ -1,7 +1,16 @@
+.LoginPage {
+  flex: 1; /* grows to fill parent width */
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  margin: 0 !important;
+  padding: 0 !important;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
@@ -13,19 +22,70 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html, body, #root {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+
+.lexend {
+  font-family: "Lexend", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-style: normal;
+  color: #ffffff;
+}
+
+
+#userIdInput {
+  width: 260px;
+  padding: 12px 16px;
+  border-radius: 25px;
+  background: rgba(255, 255, 255, 0.25); /* 25% opacity white */
+  color: #ffffff;                         /* white text */
+  border: none;
+  outline: none;
+  font-size: 1rem;
+
+  /* inset shadow for depth */
+  box-shadow:
+    inset 0 0 15px rgba(255, 255, 255, 0.25);
+
+  backdrop-filter: blur(6px); /* optional: gives a frosted look */
+  transition: ease-in-out 0.5s;
+}
+
+#userIdInput::placeholder {
+  color: rgba(255, 255, 255, 1);
+  transition: ease-in-out 0.5s;
+}
+
+#userIdInput:focus {
+  background: #ffffff;  /* full white background */
+  color: hwb(0 0% 75%);       /* black text */
+  transition: ease-in-out 0.5s;
+}
+
+#userIdInput:focus::placeholder {
+  color: hwb(0 0% 75%); /* placeholder becomes black as well */
+  transition: ease-in-out 0.5s;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -35,24 +95,33 @@ h1 {
   line-height: 1.1;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
+.button-white {
+  font-family: "Lexend", sans-serif;
+  display: inline-block;
+  padding: 12px 24px;
+  margin: 25px;
+  border-radius: 25px; 
+  background-color: #ffffff;
+  color: hwb(0 0% 100% / 0.75);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  border: none;
+  cursor: pointer;                 
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); 
+  transition: all 0.2s ease;
 }
-button:hover {
-  border-color: #646cff;
+
+.button-white:hover {
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.25); /* stronger shadow on hover */
+  transform: translateY(-2px);                /* subtle lift effect */
 }
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+
+.button-white:active {
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2); /* slightly smaller shadow */
+  transform: translateY(0);                 /* back to original position */
 }
+
 
 @media (prefers-color-scheme: light) {
   :root {
@@ -62,7 +131,5 @@ button:focus-visible {
   a:hover {
     color: #747bff;
   }
-  button {
-    background-color: #f9f9f9;
-  }
+
 }
