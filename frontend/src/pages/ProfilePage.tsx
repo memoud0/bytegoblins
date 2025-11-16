@@ -11,7 +11,7 @@ import removeIcon from "../assets/remove-icon.png";
 import { useUserId } from "../useUserId";
 
 const API_BASE = "http://127.0.0.1:5000/api";
-const CARD_HEIGHT_PX = 420; // keep both rectangles same height
+const CARD_HEIGHT_PX = 670; // keep both rectangles same height
 
 type PersonalityMetrics = {
   avg_energy: number;
@@ -281,13 +281,13 @@ const handleRemoveFromLibrary = async (trackId: string) => {
                   className="personality-text"
                   style={{
                     marginTop: "16px",
-                    overflowY: "auto",
-                    maxHeight: "320px",
+                    overflowY: "hidden",
+                    maxHeight: "100%",
                     paddingRight: "8px",
                     maxWidth: "540px",       // narrower text column
                     marginLeft: "auto",
                     marginRight: "auto",     // centers the column in the card
-                    textAlign: "left",
+                    textAlign: "justify",
                   }}
                 >
                   {renderLongDescription()}
