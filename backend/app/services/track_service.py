@@ -35,13 +35,17 @@ class TrackService:
         return results
 
     def get_seed_tracks(self, exclude_track_ids: set[str], limit: int = 12) -> list[Track]:
+        # Pull a bigger pool of popular tracks
         query = (
             self.db.collection("tracks")
             .where("popularity_norm", ">=", 0.88)
             .order_by("popularity_norm", direction=firestore.Query.DESCENDING)
-            .limit(400)
+            .limit(1000)  # was 400
         )
         docs = list(query.stream())
+
+        # Global shuffle so we don't always start from the same head of the list
+        random.shuffle(docs)
 
         buckets: dict[str, list[Track]] = {}
         for doc in docs:
@@ -52,6 +56,7 @@ class TrackService:
             genre_key = track.track_genre_group or track.track_genre or "misc"
             buckets.setdefault(genre_key, []).append(track)
 
+        # Shuffle inside each genre bucket too, for extra variety
         for genre_tracks in buckets.values():
             random.shuffle(genre_tracks)
 
@@ -64,6 +69,7 @@ class TrackService:
                 selected.append(tracks.pop())
                 if len(selected) >= limit:
                     break
+
         return selected
 
     def get_candidate_tracks(
