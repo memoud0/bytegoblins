@@ -54,7 +54,7 @@
 .library-list {
   margin-top: 12px;
   overflow-y: auto;
-  max-height: 320px;        /* height available for rows inside card */
+  max-height: 100%;        /* height available for rows inside card */
   padding-right: 8px;       /* so scrollbar doesn't cover content */
 }
 
