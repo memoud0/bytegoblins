@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
-import { useNavigate } from "react-router-dom";
 import { useUserId } from "../useUserId";
 // import { db } from "../firebase";
 // import {
