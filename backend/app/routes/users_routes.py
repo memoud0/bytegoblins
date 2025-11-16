@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
-
 from app.firebase_client import get_firestore_client, server_timestamp
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
+
+
+def _serialize_timestamp(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    return value.isoformat()
 
 
 @users_bp.post("/login")
@@ -15,31 +20,18 @@ def login():
     if not username:
         return jsonify({"error": "username is required"}), 400
 
-    # normalize username (optional: lowercase to avoid duplicates)
     username_norm = username.lower()
-
-    db = get_firestore_client()
-    user_ref = db.collection("users").document(username_norm)
+    service = UserService()
+    user_ref = service.db.collection("users").document(username_norm)
     snap = user_ref.get()
 
-    created = False  # <-- define default
-
     if not snap.exists:
-        created = True
         user_ref.set(
             {
                 "username": username_norm,
                 "created_at": server_timestamp(),
                 "last_active_at": server_timestamp(),
-                # optional: initialize aggregates for consistency with UserProfile
-                "likes_count": 0,
-                "dislikes_count": 0,
-                "liked_genres": {},
-                "disliked_genres": {},
-                "feature_sums_liked": {},
-                "feature_sums_disliked": {},
-            },
-            merge=True,
+            }
         )
     else:
         user_ref.update(
@@ -48,6 +40,8 @@ def login():
             }
         )
 
+
+    # You can expand this response later with aggregates, preferences, etc.
     return jsonify(
         {
             "username": username_norm,

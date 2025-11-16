@@ -1,22 +1,23 @@
-import { useEffect, useState } from "react";
-
-function createRandomId(){
-    if (crypto.randomUUID){
-        return crypto.randomUUID();
-    }
-    return Math.random().toString(36).slice(2);
-}
+import { useCallback, useState } from "react";
 
 export function useUserId() {
-    const [userId, setUserId] = useState<string | null>(null);
+    const [userId, setUserIdState] = useState<string | null>(() =>
+        localStorage.getItem("userId")
+    );
 
-    useEffect(() => {
-        let storedUserId = localStorage.getItem("userId");
-        if (!storedUserId) {
-            storedUserId = createRandomId();
-            localStorage.setItem("userId", storedUserId);
-        }
-        setUserId(storedUserId);
-    }, []);
-    return userId;
+    const persistUserId = useCallback(
+        (next: string | null) => {
+            if (next && next.trim()) {
+                const normalized = next.trim().toLowerCase();
+                localStorage.setItem("userId", normalized);
+                setUserIdState(normalized);
+            } else {
+                localStorage.removeItem("userId");
+                setUserIdState(null);
+            }
+        },
+        [setUserIdState]
+    );
+
+    return { userId, setUserId: persistUserId };
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import random
+import uuid
+import math
 from typing import Any
 
 from app.firebase_client import get_firestore_client, server_timestamp
@@ -21,7 +22,7 @@ class SessionService:
         self.library_service = LibraryService()
         self.recommendation_service = RecommendationService()
 
-    def create_session(self, username: str, seed_limit: int = 12) -> dict[str, Any]:
+    def create_session(self, username: str, seed_limit: int = 5) -> dict[str, Any]:
         """
         Create a new match session with seed tracks.
 
@@ -225,13 +226,68 @@ class SessionService:
         swiped_ids = self.user_service.get_swiped_track_ids(username)
         exclude_ids = library_ids | swiped_ids
 
-        refined_ids = self.recommendation_service.build_refined_track_ids(
+        # Build two buckets and enforce ~1/3 recommendations and ~2/3 seed-based candidates
+        TOTAL_LIMIT = 60
+        rec_quota = max(1, math.ceil(TOTAL_LIMIT / 3))
+        seed_quota = TOTAL_LIMIT - rec_quota
+
+        # Get a slightly larger set from each source to allow dedupe and filtering
+        rec_candidates = self.recommendation_service.build_refined_track_ids(
             top_genres=top_genres,
             feature_preferences=preferences,
             exclude_track_ids=exclude_ids,
+            limit=rec_quota * 3,
         )
 
-        session.refined_track_ids = refined_ids
+        seed_tracks = self.track_service.get_candidate_tracks(
+            top_genres=top_genres,
+            exclude_track_ids=exclude_ids,
+            limit=seed_quota * 4,
+        )
+        seed_candidates = [t.track_id for t in seed_tracks]
+
+        # DEBUG: inspect recommendations and genre distribution for rec_candidates
+        try:
+            from collections import Counter
+            genres = []
+            for tid in rec_candidates[:200]:
+                t = self.track_service.get_track(tid)
+                if t and getattr(t, "track_genre", None):
+                    genres.append(t.track_genre or t.track_genre_group)
+            counts = Counter(genres)
+            print("DEBUG: top_genres:", top_genres)
+            print("DEBUG: preferences keys:", list(preferences.keys())[:10])
+            print("DEBUG: rec_candidates count:", len(rec_candidates))
+            print("DEBUG: rec genre distribution (top 10):", counts.most_common(10))
+        except Exception:
+            pass
+
+        final_ids: list[str] = []
+        seen: set[str] = set()
+
+        def take_from(source: list[str], n: int):
+            taken = 0
+            for tid in source:
+                if taken >= n:
+                    break
+                if tid in seen:
+                    continue
+                seen.add(tid)
+                final_ids.append(tid)
+                taken += 1
+            return taken
+
+        # Fill quotas
+        take_from(rec_candidates, rec_quota)
+        take_from(seed_candidates, seed_quota)
+
+        # Top up if needed
+        if len(final_ids) < TOTAL_LIMIT:
+            take_from(rec_candidates, TOTAL_LIMIT - len(final_ids))
+        if len(final_ids) < TOTAL_LIMIT:
+            take_from(seed_candidates, TOTAL_LIMIT - len(final_ids))
+
+        session.refined_track_ids = final_ids
         session.phase = "refined"
         session.current_index = 0
         session.updated_at = server_timestamp()
@@ -252,73 +308,47 @@ class SessionService:
         payload["updated_at"] = server_timestamp()
         self._session_ref(username, session.session_id).set(payload, merge=True)
 
-    def _next_mixed_track(
-        self,
-        username: str,
-        session: MatchSession,
-        skip_ids: set[str],
-    ) -> Track | None:
+    def like_track_without_session(
+    self,
+    username: str,
+    track_id: str,
+    source: str = "search",
+) -> Track:
         """
-        After refinement: mix seeds & refined.
+        Record a 'like' for a track outside of any match session.
 
-        Approximate ratio:
-          - 1/3 of requests -> refined_track_ids
-          - 2/3 of requests -> seed_track_ids
-
-        We always skip:
-          - tracks already in library
-          - tracks already swiped
+        - Updates user aggregates via UserService.record_swipe
+        - Adds track to library via LibraryService.add_to_library
+        - Does NOT require a MatchSession or session_id from frontend
         """
-        seed_ids = session.seed_track_ids or []
-        refined_ids = session.refined_track_ids or []
+        username = username.lower()
 
-        has_seed = bool(seed_ids)
-        has_refined = bool(refined_ids)
+        # Ensure user exists
+        self.user_service.ensure_user(username)
 
-        if not has_seed and not has_refined:
-            return None
+        track = self.track_service.get_track(track_id)
+        if not track:
+            raise ValueError("Track not found.")
 
-        # Helper to pull next usable track from a list of IDs
-        def pick_from_ids(ids: list[str]) -> Track | None:
-            for tid in ids:
-                if tid in skip_ids:
-                    continue
-                track = self.track_service.get_track(tid)
-                if track:
-                    return track
-            return None
+        # Use a synthetic session/phase so aggregates stay consistent
+        synthetic_session_id = f"{source}-standalone"
+        phase = source  # e.g. "search"
 
-        # We’ll do up to 2 attempts:
-        #  1) preferred source (based on ratio)
-        #  2) fallback to the other source if first was empty/exhausted
-        for _ in range(2):
-            use_refined = False
+        # Record swipe as a "like"
+        self.user_service.record_swipe(
+            username=username,
+            session_id=synthetic_session_id,
+            track=track,
+            liked=True,
+            phase=phase,
+        )
 
-            if has_seed and has_refined:
-                # Both available: 1/3 chance refined, 2/3 chance seed
-                use_refined = random.random() < (1.0 / 3.0)
-            elif has_refined:
-                use_refined = True
-            else:
-                use_refined = False  # only seeds left
+        # Add to library as well
+        self.library_service.add_to_library(
+            username=username,
+            track_id=track_id,
+            source=source,
+        )
 
-            if use_refined:
-                candidate = pick_from_ids(refined_ids)
-            else:
-                candidate = pick_from_ids(seed_ids)
+        return track
 
-            if candidate is not None:
-                # We don't rely on current_index in blended mode; treat it as a simple counter
-                session.current_index += 1
-                session.updated_at = server_timestamp()
-                self._save_session(username, session)
-                return candidate
-
-            # If the chosen source had nothing usable, disable it and try the other on next loop
-            if use_refined:
-                has_refined = False
-            else:
-                has_seed = False
-
-        # Neither source could produce a new track
-        return None

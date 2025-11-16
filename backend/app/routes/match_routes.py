@@ -161,3 +161,54 @@ def next_track():
             "track": track.to_dict(),
         }
     ), 200
+
+@match_bp.post("/like")
+def like_without_session():
+    """
+    POST /api/match/like
+
+    Body JSON:
+    {
+      "username": "mo",
+      "trackId": "4uUG5RXrOk84mYEfFvj3cK",
+      "source": "search"   // optional, default "search"
+    }
+
+    Behavior:
+    - Treats this as a 'like' swipe outside of any specific session.
+    - Updates user aggregates and adds track to library.
+    """
+    data = request.get_json(silent=True) or {}
+
+    username_raw = data.get("username")
+    track_id = (data.get("trackId") or "").strip()
+    source = (data.get("source") or "search").strip()
+
+    if not isinstance(username_raw, str):
+        return jsonify({"error": "username must be a string"}), 400
+
+    username = username_raw.strip().lower()
+    if not username or not track_id:
+        return jsonify({"error": "username and trackId are required"}), 400
+
+    service = SessionService()
+    try:
+        track = service.like_track_without_session(
+            username=username,
+            track_id=track_id,
+            source=source,
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except Exception as exc:  # pragma: no cover
+        print("Error in /api/match/like:", exc)
+        return jsonify({"error": "Failed to like track"}), 500
+
+    return jsonify(
+        {
+            "liked": True,
+            "username": username,
+            "track": track.to_dict(),
+            "source": source,
+        }
+    ), 200

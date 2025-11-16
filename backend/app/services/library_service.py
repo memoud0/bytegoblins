@@ -48,3 +48,20 @@ class LibraryService:
                 {"selected_track_id": track_id, "updated_at": now}, merge=True
             )
         return track
+    
+    def remove_from_library(self, username: str, track_id: str) -> None:
+        """
+        Delete a track from the user's library.
+
+        Raises:
+            ValueError if the track is not in the library.
+        """
+        username_norm = username.lower()
+        user_ref = self.db.collection("users").document(username_norm)
+        doc_ref = user_ref.collection("library").document(track_id)
+
+        snap = doc_ref.get()
+        if not snap.exists:
+            raise ValueError("Track not found in library.")
+
+        doc_ref.delete()

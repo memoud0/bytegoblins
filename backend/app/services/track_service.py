@@ -38,7 +38,7 @@ class TrackService:
         # Pull a bigger pool of popular tracks
         query = (
             self.db.collection("tracks")
-            .where("popularity_norm", ">=", 0.88)
+            .where("popularity_norm", ">=", 0.75)
             .order_by("popularity_norm", direction=firestore.Query.DESCENDING)
             .limit(1000)  # was 400
         )
