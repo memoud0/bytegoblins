@@ -264,13 +264,14 @@ function ExplorePage() {
   const nextBgImage = albumArtUrl || fallbackImage;
   const hasTrackLoaded = Boolean(currentTrack);
   const cardClassName = [
-    "music-card-explorer",
-    swipeDirection ? `${swipeDirection}-explorer` : "",
-    hasTrackLoaded ? (cardVisible ? "card-visible-explorer" : "card-hidden-explorer") : "music-card--empty-explorer",
+    "music-card",
+    "explore-card",
+    swipeDirection ? (swipeDirection === "left" ? "left" : "right") : "",
+    hasTrackLoaded ? (cardVisible ? "card-visible" : "card-hidden") : "music-card--empty",
   ]
     .filter(Boolean)
     .join(" ");
-  const isInteractionDisabled = !hasTrackLoaded || isInitializing || isFetchingNext || isSwipePending;
+    const isInteractionDisabled = !hasTrackLoaded || isInitializing || isFetchingNext || isSwipePending;
 
   const goToExplore = () => {
     setActiveTab("explore");
@@ -317,19 +318,21 @@ function ExplorePage() {
   }, [nextBgImage]);
 
   return (
-    <div className="page-wrapper-explorer" data-remixing={isBgRemixing ? "true" : "false"}>
-      {backgroundState.sources.map((src, index) => (
-        <img
-          key={`bg-layer-${index}`}
-          className="bg-blur-layer-explorer"
-          data-active={backgroundState.activeIndex === index ? "true" : "false"}
-          data-remixing={isBgRemixing && backgroundState.activeIndex === index ? "true" : "false"}
-          src={src}
-          alt=""
-        />
-      ))}
+    <div className="page-wrapper explore-page" data-remixing={isBgRemixing ? "true" : "false"}>
+      <div className="explore-background">
+        {backgroundState.sources.map((src, index) => (
+          <img
+            key={`bg-layer-${index}`}
+            className="explore-bg-layer"
+            data-active={backgroundState.activeIndex === index ? "true" : "false"}
+            data-remixing={isBgRemixing && backgroundState.activeIndex === index ? "true" : "false"}
+            src={src}
+            alt=""
+          />
+        ))}
+      </div>
 
-      {toastMessage && <div className="toast-explorer lexend-explorer">{toastMessage}</div>}
+      {toastMessage && <div className="toast lexend">{toastMessage}</div>}
 
       <div className="content-explorer">
         <h1 className="lexend-explorer">Explore</h1>
@@ -337,37 +340,39 @@ function ExplorePage() {
         <div className={`${cardClassName} explore-card`}>
           {hasTrackLoaded ? (
             <>
-              <div className="album-cover-wrapper-explorer">
-                <img className="album-cover-explorer" src={nextBgImage} style={{ width: "300px" }} />
+              <div className="explore-card__cover">
+                <img className="album-cover explore-album" src={nextBgImage} alt={`${songTitle} album cover`} />
               </div>
 
-              <div className="song-title-explorer">{songTitle}</div>
-              <div className="song-artist-explorer">{songArtist}</div>
+              <div className="explore-card__details">
+                <div className="song-title">{songTitle}</div>
+                <div className="song-artist">{songArtist}</div>
 
-              <AudioPreviewBar previewUrl={previewSrc} disabled={isInteractionDisabled} />
+                <AudioPreviewBar previewUrl={previewSrc} disabled={isInteractionDisabled} />
+              </div>
 
               <div className="action-button-row-explorer">
                 <div className="dislike-button-explorer" onClick={handleDislike} aria-disabled={isInteractionDisabled}>
                   <img src={dislikeDefault} width="100" />
                 </div>
 
-                <div className="like-button-explorer" onClick={handleLike} aria-disabled={isInteractionDisabled}>
+                <div className="like-button" onClick={handleLike} aria-disabled={isInteractionDisabled}>
                   <img src={likeDefault} width="100" />
                 </div>
               </div>
             </>
           ) : (
-            <div className="music-card__loading-explorer">
-              <div className="music-card__spinner-explorer" />
-              <p className="music-card__loading-text-explorer lexend-explorer">Finding your next match...</p>
+            <div className="music-card__loading">
+              <div className="music-card__spinner" />
+              <p className="music-card__loading-text lexend">Finding your next match...</p>
             </div>
           )}
         </div>
 
-        <div className="menu-explorer"> 
+        <div className="menu">
           <button
             id="exploreButton"
-            className={`menu-button-explorer ${activeTab !== "explore" ? "not-current-explorer" : ""}`}
+            className={`menu-button ${activeTab !== "explore" ? "not-current" : ""}`}
             onClick={goToExplore}
           >
             <img src={exploreBlack} width="20" style={{ paddingRight: "10px" }} />
@@ -376,7 +381,7 @@ function ExplorePage() {
 
           <button
             id="searchButton"
-            className={`menu-button-explorer ${activeTab !== "search" ? "not-current-explorer" : ""}`}
+            className={`menu-button ${activeTab !== "search" ? "not-current" : ""}`}
             onClick={goToSearch}
           >
             <img src={searchWhite} width="20" style={{ paddingRight: "10px" }} />
@@ -385,7 +390,7 @@ function ExplorePage() {
 
           <button
             id="profileButton"
-            className={`menu-button-explorer ${activeTab !== "profile" ? "not-current-explorer" : ""}`}
+            className={`menu-button ${activeTab !== "profile" ? "not-current" : ""}`}
             onClick={goToProfile}
           >
             <img src={profileWhite} width="20" style={{ paddingRight: "10px" }} />
