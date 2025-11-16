@@ -85,10 +85,10 @@ interface Song {
           </div>
         </div>
 
-        <div className='music-card'> 
-          <button>Explore</button>
-          <button>Search</button>
-          <button>My profile</button>
+        <div className='menu'> 
+          <button className='menu-button'>Explore</button>
+          <button className='menu-button'>Search</button>
+          <button className='menu-button'>My profile</button>
         </div>
 
       </div>
