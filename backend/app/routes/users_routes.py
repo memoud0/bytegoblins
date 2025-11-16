@@ -1,12 +1,7 @@
-# app/routes/users_routes.py
 from __future__ import annotations
 
-from datetime import datetime
-
 from flask import Blueprint, jsonify, request
-
-from app.firebase_client import server_timestamp
-from app.services.user_service import UserService
+from app.firebase_client import get_firestore_client, server_timestamp
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
@@ -29,20 +24,27 @@ def login():
     service = UserService()
     user_ref = service.db.collection("users").document(username_norm)
     snap = user_ref.get()
-    created = not snap.exists
-    profile = service.ensure_user(username_norm)
 
-    user_ref.update({"last_active_at": server_timestamp()})
-
-    return (
-        jsonify(
+    if not snap.exists:
+        user_ref.set(
             {
-                "username": profile.username,
-                "created_at": _serialize_timestamp(profile.created_at),
-                "likes_count": profile.likes_count,
-                "dislikes_count": profile.dislikes_count,
-                "created": created,
+                "username": username_norm,
+                "created_at": server_timestamp(),
+                "last_active_at": server_timestamp(),
             }
-        ),
-        200,
-    )
+        )
+    else:
+        user_ref.update(
+            {
+                "last_active_at": server_timestamp(),
+            }
+        )
+
+
+    # You can expand this response later with aggregates, preferences, etc.
+    return jsonify(
+        {
+            "username": username_norm,
+            "created": created,
+        }
+    ), 200
