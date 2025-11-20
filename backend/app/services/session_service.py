@@ -61,8 +61,8 @@ class SessionService:
             "created_at": now,
             "updated_at": now,
             "is_active": True,
-            "phase": "seed",          # matches your later logic (session.phase)
-            "status": "active",       # used in completion logic
+            "phase": "seed",
+            "status": "active",
             "seed_track_ids": seed_ids,
             "refined_track_ids": [],
             "current_index": 0,
@@ -202,6 +202,67 @@ class SessionService:
         # Ran out of seed tracks: force refinement and then blend
         session = self._transition_to_refined(username, session)
         return self.get_next_track(username, session)
+    
+    def _next_mixed_track(
+    self,
+    username: str,
+    session: MatchSession,
+    skip_ids: set[str],
+) -> Track | None:
+        """
+        Blended mode after refinement:
+        - 2/3 probability: pick from seed_track_ids
+        - 1/3 probability: pick from refined_track_ids
+        - Always skip tracks already in library or already swiped
+        """
+
+        import random
+
+        # --- Sources ---
+        seed_ids = session.seed_track_ids or []
+        refined_ids = session.refined_track_ids or []
+
+        # Randomly choose which bucket to attempt first
+        prefer_seed = random.random() < 0.66
+
+        def get_next_from_list(track_ids: list[str]) -> Track | None:
+            # Use session.current_index as a global pointer across both lists
+            # but ensure we scan the list in a loop for the next available track.
+            start_idx = session.current_index
+            n = len(track_ids)
+
+            for offset in range(n):
+                idx = (start_idx + offset) % n
+                tid = track_ids[idx]
+
+                if tid in skip_ids:
+                    continue
+
+                t = self.track_service.get_track(tid)
+                if not t:
+                    continue
+
+                # Update index only after confirming the track is valid
+                session.current_index = idx + 1
+                session.updated_at = server_timestamp()
+                self._save_session(username, session)
+                return t
+
+            return None
+
+        # Try preferred source first
+        if prefer_seed:
+            track = get_next_from_list(seed_ids)
+            if track:
+                return track
+            return get_next_from_list(refined_ids)
+
+        else:
+            track = get_next_from_list(refined_ids)
+            if track:
+                return track
+            return get_next_from_list(seed_ids)
+
 
     def _transition_to_refined(self, username: str, session: MatchSession) -> MatchSession:
         # Get user profile; ensure it exists

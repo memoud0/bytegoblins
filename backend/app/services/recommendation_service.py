@@ -122,6 +122,7 @@ class RecommendationService:
         exclude_track_ids: Set[str],
         candidate_limit: int = 300,
         final_limit: int = 200,
+        limit: int | None = None, 
     ) -> List[str]:
         """
         Pick refined candidate tracks and score them, returning a sorted list of track_ids.
@@ -130,6 +131,11 @@ class RecommendationService:
         - Score each track using genre + feature similarity + popularity bonus
         - Sort descending and return top N ids
         """
+        
+        # Accept legacy `limit` kwarg used elsewhere (maps to candidate_limit)
+        if limit is not None:
+            candidate_limit = limit
+            
         # Fetch candidate tracks from Firestore
         candidates = self.track_service.get_candidate_tracks(
             top_genres=top_genres,

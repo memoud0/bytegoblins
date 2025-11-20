@@ -21,8 +21,8 @@ def login():
         return jsonify({"error": "username is required"}), 400
 
     username_norm = username.lower()
-    service = UserService()
-    user_ref = service.db.collection("users").document(username_norm)
+    db = get_firestore_client()
+    user_ref = db.collection("users").document(username_norm)
     snap = user_ref.get()
 
     if not snap.exists:
@@ -33,12 +33,14 @@ def login():
                 "last_active_at": server_timestamp(),
             }
         )
+        created = True
     else:
         user_ref.update(
             {
                 "last_active_at": server_timestamp(),
             }
         )
+        created = False
 
 
     # You can expand this response later with aggregates, preferences, etc.
