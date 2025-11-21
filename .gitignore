@@ -2,3 +2,5 @@
 backend/.env
 backend/byte.json
 *.pyc
+backend/app/scripts/tracks_prepared.jsonl
+backend/app/byte.json
