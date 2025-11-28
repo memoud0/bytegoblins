@@ -14,6 +14,8 @@ import { useUserId } from "../useUserId";
 
 import loginBackground from "../assets/loginBackground.png";
 
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 interface LoginPayload {
   username?: string;
   error?: string;
@@ -72,7 +74,7 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/users/login", {
+      const response = await fetch(`${API_BASE}/api/users/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,3 +1,5 @@
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 export interface TrackDto {
   track_id: string;
   track_name: string;
@@ -63,7 +65,7 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 export async function createMatchSession(username: string): Promise<MatchSessionDto> {
-  const response = await fetch("/api/match/sessions", {
+  const response = await fetch(`${API_BASE}/api/match/sessions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -74,13 +76,13 @@ export async function createMatchSession(username: string): Promise<MatchSession
 }
 
 export async function fetchNextTrack(username: string, sessionId: string): Promise<NextTrackResponse> {
-  const url = `/api/match/next?username=${encodeURIComponent(username)}&sessionId=${encodeURIComponent(sessionId)}`;
+  const url = `${API_BASE}/api/match/next?username=${encodeURIComponent(username)}&sessionId=${encodeURIComponent(sessionId)}`;
   const response = await fetch(url, { method: "GET" });
   return handleJson<NextTrackResponse>(response);
 }
 
 export async function submitSwipe(payload: SwipePayload): Promise<void> {
-  const response = await fetch("/api/match/swipe", {
+  const response = await fetch(`${API_BASE}/api/match/swipe`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -91,7 +93,7 @@ export async function submitSwipe(payload: SwipePayload): Promise<void> {
 }
 
 export async function fetchTrackPreview(trackId: string): Promise<TrackPreviewPayload | null> {
-  const url = `/api/tracks/enriched?trackId=${encodeURIComponent(trackId)}`;
+  const url = `${API_BASE}/api/tracks/enriched?trackId=${encodeURIComponent(trackId)}`;
   const response = await fetch(url);
   if (response.status === 404) {
     return null;

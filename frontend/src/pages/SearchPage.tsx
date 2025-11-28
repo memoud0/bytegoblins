@@ -10,7 +10,7 @@ import addIcon from "../assets/add-icon-black.png";
 import fallbackCover from "../assets/albumCover-1.png";
 import { useUserId } from "../useUserId";
 
-const API_BASE = "http://127.0.0.1:5000/api";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 type BackendTrack = {
   track_id: string;
@@ -84,7 +84,7 @@ function SearchPage() {
       params.set("q", q);
       params.set("limit", "4");
 
-      const res = await fetch(`${API_BASE}/songs/search?${params.toString()}`);
+      const res = await fetch(`${API_BASE}/api/songs/search?${params.toString()}`);
       if (!res.ok) {
         throw new Error(`Search failed (${res.status})`);
       }
@@ -96,7 +96,7 @@ function SearchPage() {
       for (const t of data.tracks) {
         try {
           const enrRes = await fetch(
-            `${API_BASE}/tracks/enriched?trackId=${encodeURIComponent(
+            `${API_BASE}/api/tracks/enriched?trackId=${encodeURIComponent(
               t.track_id
             )}`
           );
@@ -156,7 +156,7 @@ function SearchPage() {
     }
 
     try {
-        const res = await fetch(`${API_BASE}/match/like`, {
+        const res = await fetch(`${API_BASE}/api/match/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

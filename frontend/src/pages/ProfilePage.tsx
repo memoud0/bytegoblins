@@ -10,7 +10,7 @@ import fallbackCover from "../assets/albumCover-1.png";
 import removeIcon from "../assets/remove-icon.png";
 import { useUserId } from "../useUserId";
 
-const API_BASE = "http://127.0.0.1:5000/api";
+const API_BASE = import.meta.env.VITE_API_BASE
 const CARD_HEIGHT_PX = 670; // keep both rectangles same height
 
 type PersonalityMetrics = {
@@ -96,7 +96,7 @@ function ProfilePage() {
       setPersonalityLoading(true);
       setPersonalityError(null);
       try {
-        const res = await fetch(`${API_BASE}/personality`, {
+        const res = await fetch(`${API_BASE}/api/personality`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username }),
@@ -121,7 +121,7 @@ function ProfilePage() {
       setLibraryError(null);
       try {
         const res = await fetch(
-          `${API_BASE}/library?username=${encodeURIComponent(username)}`
+          `${API_BASE}/api/library?username=${encodeURIComponent(username)}`
         );
         if (!res.ok) {
           throw new Error(`Library failed (${res.status})`);
@@ -135,7 +135,7 @@ function ProfilePage() {
         for (const t of tracks) {
           try {
             const enrRes = await fetch(
-              `${API_BASE}/tracks/enriched?trackId=${encodeURIComponent(
+              `${API_BASE}/api/tracks/enriched?trackId=${encodeURIComponent(
                 t.track_id
               )}`
             );
@@ -186,7 +186,7 @@ const handleRemoveFromLibrary = async (trackId: string) => {
 
   try {
     const res = await fetch(
-      `${API_BASE}/library/${encodeURIComponent(
+      `${API_BASE}/api/library/${encodeURIComponent(
         trackId
       )}?username=${encodeURIComponent(username)}`,
       { method: "DELETE" }
