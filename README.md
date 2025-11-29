@@ -117,7 +117,5 @@ This delivers surprisingly accurate music-taste modeling without requiring a ded
 
 ## Live Demo
 
-The backend powers the live demo here:
-
 **https://bytegoblins.vercel.app/**
 
