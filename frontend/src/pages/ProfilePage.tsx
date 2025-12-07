@@ -128,41 +128,23 @@ function ProfilePage() {
         }
 
         const data = await res.json();
-        // Expecting { username, tracks: BackendTrack[] }
-        const tracks = (data.tracks || []) as BackendTrack[];
+        // Expecting { username, tracks: { track: BackendTrack, spotify: {...} }[] }
+        const entries = (data.tracks || []) as Array<{
+          track: BackendTrack;
+          spotify?: { album_image_url?: string; [k: string]: any };
+        }>;
 
-        const enriched: LibrarySong[] = [];
-        for (const t of tracks) {
-          try {
-            const enrRes = await fetch(
-              `${API_BASE}/api/tracks/enriched?trackId=${encodeURIComponent(
-                t.track_id
-              )}`
-            );
-            const enrData = await enrRes.json();
-            const cover =
-              enrData?.spotify?.album_image_url ??
-              enrData?.track?.album_image_url ??
-              fallbackCover;
-
-            enriched.push({
-              trackId: t.track_id,
-              title: t.track_name,
-              artist: (t.artists && t.artists.join(", ")) || "Unknown artist",
-              album: t.album_name || "",
-              coverUrl: cover,
-            });
-          } catch {
-            enriched.push({
-              trackId: t.track_id,
-              title: t.track_name,
-              artist: (t.artists && t.artists.join(", ")) || "Unknown artist",
-              album: t.album_name || "",
-              coverUrl: fallbackCover,
-            });
-          }
-        }
-
+        const enriched = entries.map(({ track, spotify }) => {
+          const cover = spotify?.album_image_url ?? fallbackCover;
+          return {
+            trackId: track.track_id,
+            title: track.track_name,
+            artist: (track.artists && track.artists.join(", ")) || "Unknown artist",
+            album: track.album_name || "",
+            coverUrl: cover,
+          } as LibrarySong;
+        });
+        
         setLibrary(enriched);
       } catch (err) {
         console.error("Failed to fetch library:", err);
