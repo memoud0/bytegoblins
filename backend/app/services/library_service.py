@@ -5,6 +5,7 @@ from firebase_admin import firestore
 from app.firebase_client import get_firestore_client, server_timestamp
 from app.models import Track
 from app.services.track_service import TrackService
+from app.services.spotify_service import SpotifyService
 
 
 class LibraryService:
@@ -65,3 +66,26 @@ class LibraryService:
             raise ValueError("Track not found in library.")
 
         doc_ref.delete()
+
+    def get_library_tracks_enriched(self, username: str, enrich: bool = True) -> list[dict]:
+        """
+        Return the user's library as a list of dicts:
+          { "track": <track.to_dict()>, "spotify": <spotify_info dict> }
+
+        - Uses SpotifyService.get_tracks_details to enrich in bulk (efficient, uses /v1/tracks?ids=...).
+        - Does not persist enriched fields; just returns best-effort data.
+        """
+        tracks = self.get_library_tracks(username)
+        if not enrich or not tracks:
+            return [{"track": t.to_dict(), "spotify": {}} for t in tracks]
+
+        spotify_svc = SpotifyService()
+        ids = [t.track_id for t in tracks]
+        meta_map = {t.track_id: t for t in tracks}
+        spotify_map = spotify_svc.get_tracks_details(ids, track_metadata_map=meta_map)
+
+        enriched_list: list[dict] = []
+        for t in tracks:
+            enriched_list.append({"track": t.to_dict(), "spotify": spotify_map.get(t.track_id, {})})
+
+        return enriched_list

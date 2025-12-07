@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from app.services.library_service import LibraryService
 
@@ -8,23 +8,17 @@ library_bp = Blueprint("library", __name__, url_prefix="/api")
 
 @library_bp.get("/library")
 def get_library():
-    """
-    GET /api/library?username=mo
-
-    Returns the user's library as Track[].
-    """
     username = (request.args.get("username") or "").strip()
     if not username:
         return jsonify({"error": "username is required"}), 400
 
-    # keep consistent with /users/login behavior (lowercase)
-    username_norm = username.lower()
-
-    service = LibraryService()
-    tracks = service.get_library_tracks(username_norm)
-
-    # Assuming Track has a .to_dict() method; if not, we can adapt later.
-    return jsonify({"username": username_norm, "tracks": [t.to_dict() for t in tracks]}), 200
+    svc = LibraryService()
+    try:
+        tracks = svc.get_library_tracks_enriched(username, enrich=True)
+        return jsonify({"username": username, "tracks": tracks}), 200
+    except Exception:
+        current_app.logger.exception("Failed to fetch enriched library for %s", username)
+        return jsonify({"error": "Could not load library"}), 500
 
 @library_bp.post("/library/add")
 def add_to_library():

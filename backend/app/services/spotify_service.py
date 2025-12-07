@@ -114,3 +114,121 @@ class SpotifyService:
             pass
 
         return result
+    
+    def get_tracks_details(self, spotify_ids: list[str], track_metadata_map: dict[str, Track] | None = None) -> dict[str, dict[str, Any]]:
+        """
+        Fetch details for multiple Spotify track IDs using /v1/tracks?ids=id1,id2,... (max 50 ids per request).
+        Returns a mapping spotify_id -> details dict (same shape as get_track_details returns).
+        Uses caching, respects Spotify rate-limits (Retry-After) and applies small exponential backoff on 429s/network errors.
+        """
+        # normalize & dedupe preserving order
+        seen = set()
+        ids = [i for i in spotify_ids if isinstance(i, str) and not (i in seen or seen.add(i))]
+        result: dict[str, dict[str, Any]] = {}
+
+        # fast-return for cached items
+        to_fetch: list[str] = []
+        now = time.time()
+        for sid in ids:
+            cached = self._cache.get(sid)
+            if cached and (now - cached[0]) < self._cache_ttl:
+                result[sid] = cached[1]
+            else:
+                to_fetch.append(sid)
+
+        if not to_fetch:
+            return {sid: result.get(sid, {}) for sid in ids}
+
+        token = self._get_access_token()
+        # Spotify allows up to 50 ids per request
+        CHUNK = 50
+        max_attempts = int(current_app.config.get("SPOTIFY_BATCH_ATTEMPTS", 3))
+        base_backoff = float(current_app.config.get("SPOTIFY_BASE_BACKOFF", 0.5))
+
+        for i in range(0, len(to_fetch), CHUNK):
+            chunk = to_fetch[i : i + CHUNK]
+            url = "https://api.spotify.com/v1/tracks"
+            params = {"ids": ",".join(chunk)}
+            attempt = 1
+            while attempt <= max_attempts:
+                try:
+                    resp = requests.get(url, headers={"Authorization": f"Bearer {token}"}, params=params, timeout=10)
+                except requests.RequestException:
+                    wait = base_backoff * (2 ** (attempt - 1))
+                    time.sleep(wait)
+                    attempt += 1
+                    continue
+
+                if resp.status_code == 429:
+                    retry_after = resp.headers.get("Retry-After")
+                    try:
+                        wait = int(retry_after) if (retry_after and retry_after.isdigit()) else base_backoff * (2 ** (attempt - 1))
+                    except Exception:
+                        wait = base_backoff * (2 ** (attempt - 1))
+                    time.sleep(wait)
+                    attempt += 1
+                    continue
+
+                if not resp.ok:
+                    # non-retryable HTTP error: break and treat as missing
+                    current_app.logger.debug("Spotify batch request failed: %s %s", resp.status_code, resp.text)
+                    break
+
+                data = resp.json()
+                tracks = data.get("tracks") or []
+                for item in tracks:
+                    if not item:
+                        continue
+                    sid = item.get("id")
+                    album = item.get("album") or {}
+                    images = album.get("images") or []
+                    image_url = images[0]["url"] if images else None
+                    preview_url = item.get("preview_url")
+                    spotify_url = item.get("external_urls", {}).get("spotify")
+                    preview_source = "spotify" if preview_url else None
+
+                    # fallback to provided track metadata for preview if needed will be handled below
+                    result[sid] = {
+                        "spotify_id": sid,
+                        "preview_url": preview_url,
+                        "album_image_url": image_url,
+                        "spotify_url": spotify_url,
+                        "preview_source": preview_source,
+                    }
+
+                # break retry loop on success
+                break
+
+            # if after attempts we still have missing items in this chunk, fill with best-effort (itunes fallback)
+            for sid in chunk:
+                if sid in result and result[sid].get("preview_url"):
+                    continue
+                # best-effort: try iTunes fallback using provided track metadata if available
+                tb_meta = (track_metadata_map or {}).get(sid) if track_metadata_map else None
+                preview_url = None
+                preview_source = None
+                if tb_meta:
+                    itunes = ItunesPreviewService()
+                    fb_url, fb_src = itunes.get_preview(tb_meta)
+                    if fb_url:
+                        preview_url = fb_url
+                        preview_source = fb_src or "itunes"
+
+                # ensure at least an empty shape exists
+                result.setdefault(sid, {
+                    "spotify_id": sid,
+                    "preview_url": preview_url,
+                    "album_image_url": None,
+                    "spotify_url": None,
+                    "preview_source": preview_source,
+                })
+
+                # cache best-effort result
+                try:
+                    self._cache[sid] = (time.time(), result[sid])
+                except Exception:
+                    pass
+
+        # preserve original requested order in returned mapping
+        ordered = {sid: result.get(sid, {}) for sid in spotify_ids if sid in result}
+        return ordered
