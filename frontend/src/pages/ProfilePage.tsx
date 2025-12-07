@@ -131,38 +131,62 @@ function ProfilePage() {
         // Expecting { username, tracks: BackendTrack[] }
         const tracks = (data.tracks || []) as BackendTrack[];
 
-        const enriched: LibrarySong[] = [];
-        for (const t of tracks) {
+        // Limit concurrent enrichment requests to avoid triggering API rate limits
+        const CONCURRENCY = 10;
+
+        async function mapWithConcurrency<T, U>(
+          items: T[],
+          mapper: (t: T) => Promise<U>,
+          limit = CONCURRENCY
+        ) {
+          const results: Promise<U>[] = [];
+          const executing: Promise<unknown>[] = [];
+          for (const item of items) {
+            const p = Promise.resolve().then(() => mapper(item));
+            results.push(p);
+            const e: Promise<unknown> = p.then(() => {
+              const idx = executing.indexOf(e);
+              if (idx >= 0) executing.splice(idx, 1);
+            });
+            executing.push(e);
+            if (executing.length >= limit) {
+              await Promise.race(executing);
+            }
+          }
+          return Promise.all(results);
+        }
+
+        const enriched = await mapWithConcurrency(tracks, async (t) => {
           try {
             const enrRes = await fetch(
               `${API_BASE}/api/tracks/enriched?trackId=${encodeURIComponent(
                 t.track_id
               )}`
             );
+            if (!enrRes.ok) throw new Error("enrich failed");
             const enrData = await enrRes.json();
             const cover =
               enrData?.spotify?.album_image_url ??
               enrData?.track?.album_image_url ??
               fallbackCover;
-
-            enriched.push({
+            return {
               trackId: t.track_id,
               title: t.track_name,
               artist: (t.artists && t.artists.join(", ")) || "Unknown artist",
               album: t.album_name || "",
               coverUrl: cover,
-            });
+            } as LibrarySong;
           } catch {
-            enriched.push({
+            return {
               trackId: t.track_id,
               title: t.track_name,
               artist: (t.artists && t.artists.join(", ")) || "Unknown artist",
               album: t.album_name || "",
               coverUrl: fallbackCover,
-            });
+            } as LibrarySong;
           }
-        }
-
+        }, CONCURRENCY);
+        
         setLibrary(enriched);
       } catch (err) {
         console.error("Failed to fetch library:", err);
