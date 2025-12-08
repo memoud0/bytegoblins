@@ -11,7 +11,7 @@ import removeIcon from "../assets/remove-icon.png";
 import { useUserId } from "../useUserId";
 
 const API_BASE = import.meta.env.VITE_API_BASE
-const CARD_HEIGHT_PX = 670; // keep both rectangles same height
+const CARD_HEIGHT_PX = 525; // keep both rectangles same height
 
 type PersonalityMetrics = {
   avg_energy: number;
