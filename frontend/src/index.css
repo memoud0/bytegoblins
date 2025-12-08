@@ -663,7 +663,7 @@ h1 {
   min-height: 100vh;
   width: 100vw;
   overflow: hidden;
-  padding: 24px 12px 36px;
+  padding: 12px 12px 36px;
 }
 
 .explore-background {
@@ -699,28 +699,30 @@ h1 {
 }
 
 .explore-content {
-  width: min(92vw, 520px);
+  width: min(92vw, 420px);
   align-items: center;
   padding-bottom: 36px;
 }
 
 .explore-content > h1 {
-  margin: 16px 0 8px;
-  text-align: center;
+  margin: 8px 0 6px;
+  font-size: 2.4rem;
 }
 
 .music-card.explore-card {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  width: min(92vw, 460px);
-  max-width: 460px;
-  min-height: 520px;
-  margin: 20px auto 120px;
-  padding: 26px 32px 32px;
+  width: min(90vw, 420px);
+  max-width: 420px;
+  min-height: 380px;
+  max-height: calc(100vh - 120px);
+  margin: 8px auto 48px;
+  padding: 18px 20px 20px;
   box-sizing: border-box;
-  gap: 18px;
-  border-radius: 36px;
+  gap: 14px;
+  border-radius: 28px;
+  overflow-y: auto; 
 }
 
 .explore-card__cover {
@@ -752,10 +754,10 @@ h1 {
 }
 
 .explore-album {
-  width: min(60vw, 240px);
-  max-width: 240px;
+  width: min(60vw, 200px);
+  max-width: 200px;
   aspect-ratio: 1 / 1;
-  border-radius: 28px;
+  border-radius: 24px;
   object-fit: cover;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
@@ -780,7 +782,7 @@ h1 {
 
 .explore-card__details .audio-preview {
   width: 100%;
-  max-width: 360px;
+  max-width: 320px;
   margin-top: 12px;
 }
 
@@ -796,7 +798,7 @@ h1 {
 
 .action-button-row-explorer .like-button img,
 .action-button-row-explorer .dislike-button-explorer img {
-  width: 92px;
+  width: 72px;
   height: auto;
 }
 
