@@ -830,3 +830,9 @@ h1 {
     transform: translate(-50%, -50%) scale(1.05);
   }
 }
+
+.content-explorer > h1 {
+  font-size: 3.0rem;
+  margin: 6px 0 6px;
+  line-height: 1.75;
+}
