@@ -15,7 +15,7 @@ A production-structured Flask + Firebase backend powering a Tinder-style music d
 
 ## Overview
 
-Byte Goblins is a backend system designed for a music-matching web app where users swipe through songs, build a personal library, and receive hyper-personalized music recommendations generated from real Spotify audio features.
+Tuneder is a backend system designed for a music-matching web app where users swipe through songs, build a personal library, and receive hyper-personalized music recommendations generated from real Spotify audio features.
 
 The project is intentionally structured like a real product backend: modular services, clean data models, scalable architecture, and a recommendation engine built on interpretable signals instead of opaque ML.
 
